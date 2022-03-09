@@ -1,7 +1,7 @@
 ﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
-// messaging library between .NET and JavaScript.
+// independent messaging library between .NET and JavaScript.
 //
 // Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
 //
@@ -44,7 +44,9 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            await this.action((T0)args[0]!).ConfigureAwait(false);
+            await this.action(
+                Utilities.ConvertTo<T0>(args[0])).
+                ConfigureAwait(false);
             return null;
         }
     }
@@ -58,7 +60,10 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            await this.action((T0)args[0]!, (T1)args[1]!).ConfigureAwait(false);
+            await this.action(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1])).
+                ConfigureAwait(false);
             return null;
         }
     }
@@ -72,7 +77,11 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            await this.action((T0)args[0]!, (T1)args[1]!, (T2)args[2]!).ConfigureAwait(false);
+            await this.action(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1]),
+                Utilities.ConvertTo<T2>(args[2])).
+                ConfigureAwait(false);
             return null;
         }
     }
@@ -86,7 +95,12 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            await this.action((T0)args[0]!, (T1)args[1]!, (T2)args[2]!, (T3)args[3]!).ConfigureAwait(false);
+            await this.action(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1]),
+                Utilities.ConvertTo<T2>(args[2]),
+                Utilities.ConvertTo<T3>(args[3])).
+                ConfigureAwait(false);
             return null;
         }
     }
@@ -112,7 +126,9 @@ namespace DupeNukem.Internal
             this.func = func;
 
         public override async Task<object?> InvokeAsync(object?[] args) =>
-            (await this.func((T0)args[0]!).ConfigureAwait(false))!;
+            (await this.func(
+                Utilities.ConvertTo<T0>(args[0])).
+                ConfigureAwait(false))!;
     }
 
     internal sealed class FuncDescriptor<TR, T0, T1> : MethodDescriptor
@@ -123,7 +139,10 @@ namespace DupeNukem.Internal
             this.func = func;
 
         public override async Task<object?> InvokeAsync(object?[] args) =>
-            (await this.func((T0)args[0]!, (T1)args[1]!).ConfigureAwait(false))!;
+            (await this.func(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1])).
+                ConfigureAwait(false))!;
     }
 
     internal sealed class FuncDescriptor<TR, T0, T1, T2> : MethodDescriptor
@@ -134,7 +153,11 @@ namespace DupeNukem.Internal
             this.func = func;
 
         public override async Task<object?> InvokeAsync(object?[] args) =>
-            (await this.func((T0)args[0]!, (T1)args[1]!, (T2)args[2]!).ConfigureAwait(false))!;
+            (await this.func(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1]),
+                Utilities.ConvertTo<T2>(args[2])).
+                ConfigureAwait(false))!;
     }
 
     internal sealed class FuncDescriptor<TR, T0, T1, T2, T3> : MethodDescriptor
@@ -145,7 +168,12 @@ namespace DupeNukem.Internal
             this.func = func;
 
         public override async Task<object?> InvokeAsync(object?[] args) =>
-            (await this.func((T0)args[0]!, (T1)args[1]!, (T2)args[2]!, (T3)args[3]!).ConfigureAwait(false))!;
+            (await this.func(
+                Utilities.ConvertTo<T0>(args[0]),
+                Utilities.ConvertTo<T1>(args[1]),
+                Utilities.ConvertTo<T2>(args[2]),
+                Utilities.ConvertTo<T3>(args[3])).
+                ConfigureAwait(false))!;
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -159,7 +187,8 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            await ((Task)this.method.DynamicInvoke(args)!).ConfigureAwait(false);
+            await ((Task)this.method.DynamicInvoke(args)!).
+                ConfigureAwait(false);
             return null;
         }
     }
@@ -173,7 +202,8 @@ namespace DupeNukem.Internal
 
         public override async Task<object?> InvokeAsync(object?[] args)
         {
-            var result = await ((Task<TR>)this.method.DynamicInvoke(args)!).ConfigureAwait(false);
+            var result = await ((Task<TR>)this.method.DynamicInvoke(args)!).
+                ConfigureAwait(false);
             return result;
         }
     }

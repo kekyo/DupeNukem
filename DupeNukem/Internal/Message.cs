@@ -1,7 +1,7 @@
 ﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
-// messaging library between .NET and JavaScript.
+// independent messaging library between .NET and JavaScript.
 //
 // Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
 //
@@ -10,39 +10,47 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 
 namespace DupeNukem.Internal
 {
+    [JsonConverter(typeof(StringEnumConverter), typeof(CamelCaseNamingStrategy))]
     internal enum MessageTypes
     {
-        Success,
+        Succeeded,
         Failed,
         Invoke,
     }
 
     internal readonly struct Message
     {
+        [JsonProperty("id")]
         public readonly string Id;
-        public readonly MessageTypes MessageType;
-        public readonly JToken Body;
+        [JsonProperty("type")]
+        public readonly MessageTypes Type;
+        [JsonProperty("body")]
+        public readonly JToken? Body;
 
         [JsonConstructor]
-        public Message(string id, MessageTypes messageType, JToken body)
+        public Message(string id, MessageTypes type, JToken? body)
         {
             this.Id = id;
-            this.MessageType = messageType;
+            this.Type = type;
             this.Body = body;
         }
     }
 
     internal readonly struct InvokeBody
     {
+        [JsonProperty("name")]
         public readonly string Name;
-        public readonly object[] Args;
+        [JsonProperty("args")]
+        public readonly object?[] Args;
 
         [JsonConstructor]
-        public InvokeBody(string name, object[] args)
+        public InvokeBody(string name, object?[] args)
         {
             this.Name = name;
             this.Args = args;
@@ -51,8 +59,11 @@ namespace DupeNukem.Internal
 
     internal readonly struct ExceptionBody
     {
+        [JsonProperty("name")]
         public readonly string Name;
+        [JsonProperty("message")]
         public readonly string Message;
+        [JsonProperty("detail")]
         public readonly string Detail;
 
         [JsonConstructor]

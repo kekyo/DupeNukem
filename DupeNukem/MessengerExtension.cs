@@ -1,7 +1,7 @@
 ﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
-// messaging library between .NET and JavaScript.
+// independent messaging library between .NET and JavaScript.
 //
 // Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
 //

@@ -1,7 +1,7 @@
 ﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
-// messaging library between .NET and JavaScript.
+// independent messaging library between .NET and JavaScript.
 //
 // Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
 //
@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -58,41 +59,69 @@ namespace DupeNukem
         }
     }
 
+    public sealed class SendRequestEventArgs : EventArgs
+    {
+        public readonly string JsonString;
+
+        public SendRequestEventArgs(string jsonString) =>
+            this.JsonString = jsonString;
+    }
+
     public sealed class Messenger : IDisposable
     {
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
         private readonly Queue<WeakReference<SuspendingDescriptor>> timeoutQueue = new();
-        private readonly Action<string> sendToClientMessage;
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
+        private readonly JsonSerializer serializer;
         private volatile int id;
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public Messenger(
-            Action<string> sendToClientMessage, TimeSpan? timeoutDuration = default)
+        public Messenger(TimeSpan? timeoutDuration = default)
         {
-            this.sendToClientMessage = sendToClientMessage;
+            this.serializer = new JsonSerializer
+            {
+#if DEBUG
+                Formatting = Formatting.Indented,
+#endif
+            };
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
+
+            this.RegisterAction("dupeNukem_Messenger_ready__", () =>
+            {
+                // Exhausted page content, maybe all suspending tasks are zombies.
+                this.CancelAllSuspending();
+
+                this.Ready?.Invoke(this, EventArgs.Empty);
+                return Task.CompletedTask;
+            });
         }
 
         public void Dispose()
         {
             this.timeoutTimer.Dispose();
+            this.CancelAllSuspending();
         }
 
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public bool SendExceptionWithStackTrace { get; set; }
+
+        public event EventHandler<SendRequestEventArgs>? SendRequest;
+
+        public event EventHandler? Ready;
         public event EventHandler? ErrorDetected;
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public string GetInjectionScript()
+        public StringBuilder GetInjectionScript()
         {
             using var s = this.GetType().Assembly.
                 GetManifestResourceStream("DupeNukem.Script.js");
             var tr = new StreamReader(s!, Encoding.UTF8);
-            return tr.ReadToEnd();
+            return new StringBuilder(tr.ReadToEnd());
         }
 
         internal void RegisterMethod(string name, MethodDescriptor method) =>
@@ -113,6 +142,21 @@ namespace DupeNukem
         }
 
         ///////////////////////////////////////////////////////////////////////////////
+
+        private void CancelAllSuspending()
+        {
+            lock (this.timeoutQueue)
+            {
+                while (this.timeoutQueue.Count >= 1)
+                {
+                    var wr = this.timeoutQueue.Dequeue();
+                    if (wr.TryGetTarget(out var descriptor))
+                    {
+                        descriptor.Cancel();
+                    }
+                }
+            }
+        }
 
         private void ReachTimeout(object? state)
         {
@@ -143,7 +187,19 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        private void SendToClientMessage(
+        private void SendMessageToClient(string jsonString)
+        {
+            if (this.SendRequest is { } sendRequest)
+            {
+                sendRequest(this, new SendRequestEventArgs(jsonString));
+            }
+            else
+            {
+                throw new InvalidOperationException("DupeNukem: SendRequest doesn't hook.");
+            }
+        }
+
+        private void SendMessageToClient(
             SuspendingDescriptor descriptor, CancellationToken ct,
             string functionName, object[] args)
         {
@@ -171,11 +227,12 @@ namespace DupeNukem
             var body = new InvokeBody(
                 functionName, args);
             var request = new Message(
-                id, MessageTypes.Invoke, JToken.FromObject(body));
-            var requestJsonString =
-                JsonConvert.SerializeObject(request);
+                id, MessageTypes.Invoke, JToken.FromObject(body, this.serializer));
 
-            this.sendToClientMessage(requestJsonString);
+            var tw = new StringWriter();
+            this.serializer.Serialize(tw, request);
+
+            this.SendMessageToClient(tw.ToString());
         }
 
         public Task InvokeClientFunctionAsync(
@@ -184,7 +241,7 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new VoidSuspendingDescriptor();
-            this.SendToClientMessage(descriptor, ct, functionName, args);
+            this.SendMessageToClient(descriptor, ct, functionName, args);
 
             return descriptor.Task;
         }
@@ -195,22 +252,23 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new SuspendingDescriptor<TR>();
-            this.SendToClientMessage(descriptor, ct, functionName, args);
+            this.SendMessageToClient(descriptor, ct, functionName, args);
 
             return descriptor.Task;
         }
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public async void ArrivedClientMesssage(string jsonString)
+        public async void ReceivedRequest(string jsonString)
         {
             try
             {
-                var message = JsonConvert.DeserializeObject<Message>(jsonString);
+                var tr = new StringReader(jsonString);
+                var message = (Message)this.serializer.Deserialize(tr, typeof(Message))!;
 
-                switch (message.MessageType)
+                switch (message.Type)
                 {
-                    case MessageTypes.Success:
+                    case MessageTypes.Succeeded:
                         if (this.suspendings.SafeTryGetValue(message.Id, out var successorDescriptor))
                         {
                             this.suspendings.SafeRemove(message.Id);
@@ -225,7 +283,7 @@ namespace DupeNukem
                         if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                         {
                             this.suspendings.SafeRemove(message.Id);
-                            var error = message.Body.ToObject<ExceptionBody>();
+                            var error = message.Body!.ToObject<ExceptionBody>();
                             try
                             {
                                 throw new JavaScriptException(error.Name, error.Message, error.Detail);
@@ -243,7 +301,7 @@ namespace DupeNukem
                     case MessageTypes.Invoke:
                         try
                         {
-                            var body = message.Body.ToObject<InvokeBody>();
+                            var body = message.Body!.ToObject<InvokeBody>();
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {
@@ -251,23 +309,27 @@ namespace DupeNukem
                                     ConfigureAwait(false);
 
                                 var response = new Message(
-                                    message.Id, MessageTypes.Success, JToken.FromObject(result!));
-                                var responseJsonString =
-                                    JsonConvert.SerializeObject(response);
+                                    message.Id, MessageTypes.Succeeded,
+                                    (result != null) ? JToken.FromObject(result, this.serializer) : null);
 
-                                this.sendToClientMessage(responseJsonString);
+                                var tw = new StringWriter();
+                                this.serializer.Serialize(tw, response);
+
+                                this.SendMessageToClient(tw.ToString());
                             }
                         }
                         catch (Exception ex)
                         {
                             var responseBody = new ExceptionBody(
-                                ex.GetType().FullName!, ex.Message, ex.ToString());  // TODO: filter
+                                ex.GetType().FullName!, ex.Message,
+                                this.SendExceptionWithStackTrace ? (ex.StackTrace ?? string.Empty) : string.Empty);
                             var response = new Message(
-                                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody));
-                            var responseJsonString =
-                                JsonConvert.SerializeObject(response);
+                                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.serializer));
 
-                            this.sendToClientMessage(responseJsonString);
+                            var tw = new StringWriter();
+                            this.serializer.Serialize(tw, response);
+
+                            this.SendMessageToClient(tw.ToString());
                         }
                         break;
                 }

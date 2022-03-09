@@ -11,23 +11,28 @@
 
 class DupeNukem_Messenger__ {
 
-    constructor() {
+    constructor(hookup) {
         this.suspendings__ = new Map();
         this.id__ = 0;
 
-        if (window?.external?.notify != undefined) {
-            this.sendToHostMessage__ = window.external.notify;
-            console.info("DupeNukem: Microsoft WebView1 detected.");
-        }
-        else if (window?.chrome?.webview?.postMessage != undefined) {
-            this.sendToHostMessage__ = window.chrome.webview.postMessage;
-            window.chrome.webview.addEventListener(
-                "message", e => { this.arrivedHostMesssage__(e.data); });
-            console.info("DupeNukem: Microsoft WebView2 detected.");
+        if (hookup != undefined) {
+            hookup();
         }
         else {
-            this.sendToHostMessage__ = function (_) { };
-            console.warn("DupeNukem: couldn't detect host browser type.");
+            if (window?.external?.notify != undefined) {
+                this.sendToHostMessage__ = window.external.notify;
+                console.info("DupeNukem: Microsoft WebView1 detected.");
+            }
+            else if (window?.chrome?.webview?.postMessage != undefined) {
+                this.sendToHostMessage__ = window.chrome.webview.postMessage;
+                window.chrome.webview.addEventListener(
+                    "message", e => { this.arrivedHostMesssage__(e.data); });
+                console.info("DupeNukem: Microsoft WebView2 detected.");
+            }
+            else {
+                this.sendToHostMessage__ = function (_) { };
+                console.warn("DupeNukem: couldn't detect host browser type.");
+            }
         }
     }
 
@@ -35,7 +40,7 @@ class DupeNukem_Messenger__ {
         try {
             const message = JSON.parse(jsonString);
             switch (message.type) {
-                case "success":
+                case "succeeded":
                     const successorDescriptor = this.suspendings__.get(message.id);
                     if (successorDescriptor != undefined) {
                         this.suspendings__.delete(message.id);
@@ -64,7 +69,7 @@ class DupeNukem_Messenger__ {
                         const ti = ne.slice(0, ne.length - 1).reduce(function (o, n) { return o[n]; }, window);
                         ti[ne[ne.length - 1]].
                             apply(ti, message.body.args).
-                            then(result => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "success", body: result, }))).
+                            then(result => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
                             catch(e => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "failed", body: { name: e.name, message: e.message, detail: e.toString() }, })));
                     }
                     catch (e) {
@@ -93,9 +98,10 @@ class DupeNukem_Messenger__ {
     }
 };
 
-const dupeNukem_Messenger__ = new DupeNukem_Messenger__();
+const dupeNukem_Messenger__ =
+    new DupeNukem_Messenger__(window.dupeNukem_Messenger_hookup);
 
-///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////
 
 function invokeHostMethod(methodName) {
     const args = new Array(arguments.length - 1);
@@ -104,3 +110,8 @@ function invokeHostMethod(methodName) {
     }
     return dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
 }
+
+invokeHostMethod("dupeNukem_Messenger_ready__");
+
+///////////////////////////////////////////////////////////////////////////////
+

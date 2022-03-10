@@ -134,6 +134,14 @@ const result_add_ = await invokeHostMethod(
 
 ## Another browsers
 
+It's knowledges for glueing browser components.
+
+### CefSharp
+
+TODO:
+
+### Android WebView
+
 TODO:
 
 ---

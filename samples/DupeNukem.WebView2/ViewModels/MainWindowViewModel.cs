@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 
 namespace DupeNukem.ViewModels
 {
-    [ViewModel]
-    internal class MainWindowViewModel
+    [ViewModel]   // PropChanged injection by Epoxy
+    internal sealed class MainWindowViewModel
     {
         public Command Loaded { get; }
 
@@ -57,8 +57,11 @@ namespace DupeNukem.ViewModels
                     await webView2.EnsureCoreWebView2Async();
 
                     // Step 2: Hook up .NET --> JavaScript message handler.
-                    messenger.SendRequest += (s, e) =>
+                    messenger.SendRequest += async (s, e) =>
+                    {
+                        await UIThread.Bind();   // Marshaling into UI thread (by Epoxy)
                         webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
+                    };
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     webView2.CoreWebView2.WebMessageReceived += (s, e) =>
@@ -66,14 +69,18 @@ namespace DupeNukem.ViewModels
 
                     // Step 4: Injected Messenger script.
                     var script = messenger.GetInjectionScript();
-                    script.AppendLine("async function js_add(a, b) { return a + b; }");  // TEST CODE: js_add implementation.
-                    script.AppendLine("async function js_sub(a, b) { return a - b; }");  // TEST CODE: js_sub implementation.
-                    script.AppendLine("(async function () {");  // TEST CODE:
-                    script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");  // TEST CODE:
-                    script.AppendLine("  console.log('add: ' + result_add);");  // TEST CODE:
-                    script.AppendLine("  const result_sub = await invokeHostMethod('sub', 1, 2);");  // TEST CODE:
-                    script.AppendLine("  console.log('sub: ' + result_sub);");  // TEST CODE:
-                    script.AppendLine("})();");  // TEST CODE:
+
+                    // ---- Added more JavaScript test code fragments:
+                    script.AppendLine("async function js_add(a, b) { return a + b; }");
+                    script.AppendLine("async function js_sub(a, b) { return a - b; }");
+                    script.AppendLine("(async function () {");
+                    script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
+                    script.AppendLine("  console.log('add: ' + result_add);");
+                    script.AppendLine("  const result_sub = await invokeHostMethod('sub', 1, 2);");
+                    script.AppendLine("  console.log('sub: ' + result_sub);");
+                    script.AppendLine("})();");
+                    // ----
+
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());
 

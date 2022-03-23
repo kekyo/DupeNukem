@@ -31,7 +31,7 @@ namespace DupeNukem.ViewModels
             // Step 1: Construct DupeNukem Messenger.
             var messenger = new Messenger();
 
-            // TEST CODE: Will be invoke when Messenger script is loaded.
+            // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>
             {
                 // Invoke JavaScript functions:
@@ -41,7 +41,14 @@ namespace DupeNukem.ViewModels
                 var result_sub = await messenger.InvokeClientFunctionAsync<int>(
                     "js_sub", 1, 2);
                 Trace.WriteLine($"js_sub: {result_sub}");
+                var result_enum1 = await messenger.InvokeClientFunctionAsync<ConsoleKey>(
+                    "js_enum1", ConsoleKey.Print);
+                Trace.WriteLine($"js_enum1: {result_enum1}");
+                var result_enum2 = await messenger.InvokeClientFunctionAsync<ConsoleKey>(
+                    "js_enum2", ConsoleKey.Print);
+                Trace.WriteLine($"js_enum2: {result_enum2}");
             };
+            // ----
 
             // MainWindow.Loaded:
             this.Loaded = CommandFactory.Create<EventArgs>(async _ =>
@@ -73,11 +80,19 @@ namespace DupeNukem.ViewModels
                     // ---- Added more JavaScript test code fragments:
                     script.AppendLine("async function js_add(a, b) { return a + b; }");
                     script.AppendLine("async function js_sub(a, b) { return a - b; }");
+                    script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
+                    script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
                     script.AppendLine("(async function () {");
                     script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
                     script.AppendLine("  console.log('add: ' + result_add);");
                     script.AppendLine("  const result_sub = await invokeHostMethod('sub', 1, 2);");
                     script.AppendLine("  console.log('sub: ' + result_sub);");
+                    script.AppendLine("  const result_enum1 = await invokeHostMethod('fromEnum', 'Print');");
+                    script.AppendLine("  console.log('enum1: ' + result_enum1);");
+                    script.AppendLine("  const result_enum2 = await invokeHostMethod('fromEnum', 42);");
+                    script.AppendLine("  console.log('enum2: ' + result_enum2);");
+                    script.AppendLine("  const result_enum3 = await invokeHostMethod('toEnum', 42);");
+                    script.AppendLine("  console.log('enum3: ' + result_enum3);");
                     script.AppendLine("})();");
                     // ----
 
@@ -90,6 +105,10 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<int, int, int>(this.Add);
                     // name: `DupeNukem.ViewModels.MainWindowViewModel.Sub`
                     messenger.RegisterFunc<int, int, int>(this.Sub);
+                    // name: `DupeNukem.ViewModels.MainWindowViewModel.FromEnum`
+                    messenger.RegisterFunc<int, ConsoleKey>(this.FromEnum);
+                    // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
+                    messenger.RegisterFunc<ConsoleKey, int>(this.ToEnum);
 
                     // Or, register directly delegate with method name.
                     messenger.RegisterFunc<int, int, int>(
@@ -98,6 +117,12 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<int, int, int>(
                         "sub",
                         (a, b) => Task.FromResult(a - b));
+                    messenger.RegisterFunc<int, ConsoleKey>(
+                        "fromEnum",
+                        key => Task.FromResult((int)key));
+                    messenger.RegisterFunc<ConsoleKey, int> (
+                        "toEnum",
+                        key => Task.FromResult((ConsoleKey)key));
                 });
             });
         }
@@ -106,5 +131,9 @@ namespace DupeNukem.ViewModels
             Task.FromResult(a + b);
         public Task<int> Sub(int a, int b) =>
             Task.FromResult(a - b);
+        public Task<int> FromEnum(ConsoleKey key) =>
+            Task.FromResult((int)key);
+        public Task<ConsoleKey> ToEnum(int key) =>
+            Task.FromResult((ConsoleKey)key);
     }
 }

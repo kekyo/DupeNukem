@@ -16,39 +16,66 @@ namespace DupeNukem.Internal
 {
     internal static class Utilities
     {
-        private abstract class ChangeType<T>
+        private static readonly Dictionary<Type, object?> defaultValues = new();
+
+        private abstract class DefaultValue
         {
-            public static readonly ChangeType<T> Instance;
-
-            static ChangeType() =>
-                Instance = typeof(T).IsEnum ?
-                    new ChangeTypeForEnum<T>() :
-                    new ChangeTypeByConverter<T>();
-
-            public abstract T Change(object? value);
+            public abstract object? GetDefaultValue();
         }
 
-        private sealed class ChangeTypeForEnum<T> : ChangeType<T>
+        private sealed class DefaultValue<T> : DefaultValue
         {
-            private readonly Type underlyingType;
-
-            public ChangeTypeForEnum() =>
-                this.underlyingType = Enum.GetUnderlyingType(typeof(T));
-
-            public override T Change(object? value) =>
-                value is string str ?
-                    (T)Enum.Parse(typeof(T), str) :
-                    (T)(object)Convert.ChangeType(value, this.underlyingType)!;
+            public override object? GetDefaultValue() =>
+                default(T);
         }
 
-        private sealed class ChangeTypeByConverter<T> : ChangeType<T>
+        public static object? GetDefaultValue(Type type)
         {
-            public override T Change(object? value) =>
-                (T)Convert.ChangeType(value, typeof(T))!;
+            lock (defaultValues)
+            {
+                if (!defaultValues.TryGetValue(type, out var value))
+                {
+                    value = ((DefaultValue)Activator.CreateInstance(
+                        typeof(DefaultValue<>).MakeGenericType(type))!).
+                        GetDefaultValue();
+                }
+                return value;
+            }
         }
 
-        public static T ConvertTo<T>(object? value) =>
-            value is T tv ? tv : ChangeType<T>.Instance.Change(value);
+        //private abstract class ChangeType<T>
+        //{
+        //    public static readonly ChangeType<T> Instance;
+
+        //    static ChangeType() =>
+        //        Instance = typeof(T).IsEnum ?
+        //            new ChangeTypeForEnum<T>() :
+        //            new ChangeTypeByConverter<T>();
+
+        //    public abstract T Change(object? value);
+        //}
+
+        //private sealed class ChangeTypeForEnum<T> : ChangeType<T>
+        //{
+        //    private readonly Type underlyingType;
+
+        //    public ChangeTypeForEnum() =>
+        //        this.underlyingType = Enum.GetUnderlyingType(typeof(T));
+
+        //    public override T Change(object? value) =>
+        //        value is string str ?
+        //            (T)Enum.Parse(typeof(T), str) :
+        //            (T)(object)Convert.ChangeType(value, this.underlyingType)!;
+        //}
+
+        //private sealed class ChangeTypeByConverter<T> : ChangeType<T>
+        //{
+        //    public override T Change(object? value) =>
+        //        (T)Convert.ChangeType(value, typeof(T))!;
+        //}
+
+        //public static T ConvertTo<T>(object? value) =>
+        //    value is T tv ? tv : ChangeType<T>.Instance.Change(value);
 
         public static string GetMethodName(Delegate dlg) =>
             $"{dlg.Method.DeclaringType?.FullName ?? "global"}.{dlg.Method.Name}";

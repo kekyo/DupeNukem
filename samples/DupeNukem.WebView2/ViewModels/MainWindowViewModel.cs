@@ -12,6 +12,7 @@
 using Epoxy;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DupeNukem.ViewModels
@@ -47,6 +48,9 @@ namespace DupeNukem.ViewModels
                 var result_enum2 = await messenger.InvokeClientFunctionAsync<ConsoleKey>(
                     "js_enum2", ConsoleKey.Print);
                 Trace.WriteLine($"js_enum2: {result_enum2}");
+                var result_array = await messenger.InvokeClientFunctionAsync<ConsoleKey[]>(
+                    "js_array", new[] { ConsoleKey.Print, ConsoleKey.Enter, ConsoleKey.Escape });
+                Trace.WriteLine($"js_array: [{string.Join(",", result_array)}]");
             };
             // ----
 
@@ -82,6 +86,7 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("async function js_sub(a, b) { return a - b; }");
                     script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
                     script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
+                    script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
                     script.AppendLine("(async function () {");
                     script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
                     script.AppendLine("  console.log('add: ' + result_add);");
@@ -93,6 +98,8 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("  console.log('enum2: ' + result_enum2);");
                     script.AppendLine("  const result_enum3 = await invokeHostMethod('toEnum', 42);");
                     script.AppendLine("  console.log('enum3: ' + result_enum3);");
+                    script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
+                    script.AppendLine("  console.log('array: ' + result_array);");
                     script.AppendLine("})();");
                     // ----
 
@@ -109,6 +116,8 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<int, ConsoleKey>(this.FromEnum);
                     // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
                     messenger.RegisterFunc<ConsoleKey, int>(this.ToEnum);
+                    // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
+                    messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(this.Array);
 
                     // Or, register directly delegate with method name.
                     messenger.RegisterFunc<int, int, int>(
@@ -123,6 +132,9 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<ConsoleKey, int> (
                         "toEnum",
                         key => Task.FromResult((ConsoleKey)key));
+                    messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]> (
+                        "array",
+                        keys => Task.FromResult(keys));
                 });
             });
         }
@@ -135,5 +147,7 @@ namespace DupeNukem.ViewModels
             Task.FromResult((int)key);
         public Task<ConsoleKey> ToEnum(int key) =>
             Task.FromResult((ConsoleKey)key);
+        public Task<ConsoleKey[]> Array(ConsoleKey[] keys) =>
+            Task.FromResult(keys);
     }
 }

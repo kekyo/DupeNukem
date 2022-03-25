@@ -47,10 +47,10 @@ namespace DupeNukem.Internal
         [JsonProperty("name")]
         public readonly string Name;
         [JsonProperty("args")]
-        public readonly object?[] Args;
+        public readonly JToken?[] Args;
 
         [JsonConstructor]
-        public InvokeBody(string name, object?[] args)
+        public InvokeBody(string name, JToken?[] args)
         {
             this.Name = name;
             this.Args = args;

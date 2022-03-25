@@ -156,6 +156,8 @@ Apache-v2.
 
 ## History
 
+* 0.3.0:
+  * Implemented flexible argument type handling.
 * 0.2.0:
   * Improved enum type handling.
 * 0.1.0:

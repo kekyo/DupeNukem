@@ -201,7 +201,7 @@ namespace DupeNukem
 
         private void SendMessageToClient(
             SuspendingDescriptor descriptor, CancellationToken ct,
-            string functionName, object[] args)
+            string functionName, object?[] args)
         {
             lock (this.timeoutQueue)
             {
@@ -225,7 +225,9 @@ namespace DupeNukem
             this.suspendings.SafeAdd(id, descriptor);
 
             var body = new InvokeBody(
-                functionName, args);
+                functionName,
+                args.Select(arg => arg != null ? JToken.FromObject(arg, this.serializer) : null).
+                ToArray());
             var request = new Message(
                 id, MessageTypes.Invoke, JToken.FromObject(body, this.serializer));
 
@@ -236,7 +238,7 @@ namespace DupeNukem
         }
 
         public Task InvokeClientFunctionAsync(
-            CancellationToken ct, string functionName, params object[] args)
+            CancellationToken ct, string functionName, params object?[] args)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -247,7 +249,7 @@ namespace DupeNukem
         }
 
         public Task<TR> InvokeClientFunctionAsync<TR>(
-            CancellationToken ct, string functionName, params object[] args)
+            CancellationToken ct, string functionName, params object?[] args)
         {
             ct.ThrowIfCancellationRequested();
 

@@ -18,7 +18,7 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 |:--|:--|
 |[![DupeNukem CI build (main)](https://github.com/kekyo/DupeNukem/workflows/.NET/badge.svg?branch=main)](https://github.com/kekyo/DupeNukem/actions?query=branch%3Amain)|[![DupeNukem CI build (develop)](https://github.com/kekyo/DupeNukem/workflows/.NET/badge.svg?branch=develop)](https://github.com/kekyo/DupeNukem/actions?query=branch%3Adevelop)|
 
----
+----
 
 ## What is this?
 
@@ -32,15 +32,45 @@ General purpose `WebView` attachable independent messaging library.
   * Send and receive pure string from JavaScript world to .NET.
   * That means, DupeNukem can attach all WebView-like browser components with bit glue code fragments.
 
----
+----
 
 ## Example
 
+Invoke JavaScript functions from .NET side:
+
+```csharp
+// Invoke JavaScript functions:
+
+var result_add = await messenger.InvokeClientFunctionAsync<int>(
+    "js_add", 1, 2);
+var result_sub = await messenger.InvokeClientFunctionAsync<int>(
+    "js_sub", 1, 2);
+```
+
+Invoke .NET methods from JavaScript side:
+
+```javascript
+// Invoke .NET methods:
+
+// `invokeHostMethod` function will return with `Promise`,
+// so we can handle asynchronous operation naturally.
+
+// `Add` method
+const result_Add_ = await invokeHostMethod(
+    "DupeNukem.ViewModels.MainWindowViewModel.Add",
+    1, 2);
+// `dotnet_add` delegate
+const result_add_ = await invokeHostMethod(
+    "dotnet_add", 1, 2);
+```
+
 Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
 
-### Setup
+----
 
-Setup process is glueing between `WebView` and DupeNukem `Messenger`.
+## Setup
+
+Setup process is gluing between `WebView` and DupeNukem `Messenger`.
 Another browser components maybe same as setup process. See `Another browsers` below.
 
 ```csharp
@@ -95,48 +125,18 @@ Declare functions around JavaScript side:
 ```javascript
 async function js_add(a, b) {
     return a + b;
-}_
+}
 
 async function js_sub(a, b) {
     return a - b;
-}_
+}
 ```
 
-### Use it
-
-Invoke JavaScript functions from .NET side:
-
-```csharp
-// Invoke JavaScript functions:
-
-var result_add = await messenger.InvokeClientFunctionAsync<int>(
-    "js_add", 1, 2);
-var result_sub = await messenger.InvokeClientFunctionAsync<int>(
-    "js_sub", 1, 2);
-```
-
-Invoke .NET methods from JavaScript side:
-
-```javascript
-// Invoke .NET methods:
-
-// `invokeHostMethod` function will return with `Promise`,
-// so we can handle asynchronous operation naturally.
-
-// `Add` method
-const result_Add_ = await invokeHostMethod(
-    "DupeNukem.ViewModels.MainWindowViewModel.Add",
-    1, 2);
-// `dotnet_add` delegate
-const result_add_ = await invokeHostMethod(
-    "dotnet_add", 1, 2);
-```
-
----
+----
 
 ## Another browsers
 
-It's knowledges for glueing browser components.
+It's knowledges for gluing browser components.
 
 ### CefSharp
 
@@ -146,13 +146,13 @@ TODO:
 
 TODO:
 
----
+----
 
 ## License
 
 Apache-v2.
 
----
+----
 
 ## History
 

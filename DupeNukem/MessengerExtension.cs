@@ -108,32 +108,42 @@ namespace DupeNukem
         ///////////////////////////////////////////////////////////////////////////////
 
         public static void RegisterObject(
-            this Messenger messenger, string name, object target)
+            this Messenger messenger, string? scopeName, object target)
         {
             foreach (var entry in Utilities.EnumerateTargetMethods(target))
             {
-                var methodName = string.IsNullOrWhiteSpace(name) ? entry.Name : $"{name}.{entry.Name}";
+                var methodName = scopeName != null ?
+                    $"{scopeName}.{entry.MethodName}" :
+                    entry.MethodName;
                 messenger.RegisterMethod(methodName, new ObjectMethodDescriptor(target, entry.Method));
             }
         }
 
         public static void RegisterObject(
-            this Messenger messenger, object target) =>
-            RegisterObject(messenger, Utilities.GetFullName(target.GetType()), target);
+            this Messenger messenger, object target, bool isFullName = true) =>
+            RegisterObject(
+                messenger,
+                isFullName ? Utilities.GetFullName(target.GetType()) : null,
+                target);
 
         public static void UnregisterObject(
-            this Messenger messenger, string name, object target)
+            this Messenger messenger, string? scopeName, object target)
         {
             foreach (var entry in Utilities.EnumerateTargetMethods(target))
             {
-                var methodName = string.IsNullOrWhiteSpace(name) ? entry.Name : $"{name}.{entry.Name}";
+                var methodName = scopeName != null ?
+                    $"{scopeName}.{entry.MethodName}" :
+                    entry.MethodName;
                 messenger.UnregisterMethod(methodName);
             }
         }
 
         public static void UnregisterObject(
-            this Messenger messenger, object target) =>
-            UnregisterObject(messenger, Utilities.GetFullName(target.GetType()), target);
+            this Messenger messenger, object target, bool isFullName = true) =>
+            UnregisterObject(
+                messenger,
+                isFullName ? Utilities.GetFullName(target.GetType()) : null,
+                target);
 
         ///////////////////////////////////////////////////////////////////////////////
 

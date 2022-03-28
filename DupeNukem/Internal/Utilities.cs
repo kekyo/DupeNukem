@@ -122,7 +122,7 @@ namespace DupeNukem.Internal
 
         public struct MethodEntry
         {
-            public string Name;
+            public string MethodName;
             public MethodInfo Method;
         }
 
@@ -135,10 +135,12 @@ namespace DupeNukem.Internal
                 Select(method => new MethodEntry
                 {
                     Method = method,
-                    Name = method.GetCustomAttribute(typeof(JavaScriptTargetAttribute), true) is JavaScriptTargetAttribute a ?
-                        (string.IsNullOrWhiteSpace(a.Name) ? GetName(method) : a.Name!) : null!,
+                    MethodName = method.GetCustomAttribute(typeof(JavaScriptTargetAttribute), true) is JavaScriptTargetAttribute a ?
+                        (string.IsNullOrWhiteSpace(a.Name) ?
+                            GetName(method) : a.Name!) :
+                        null!,
                 }).
-                Where(entry => entry.Name != null);
+                Where(entry => entry.MethodName != null);
 
         ///////////////////////////////////////////////////////////////////////////////
 

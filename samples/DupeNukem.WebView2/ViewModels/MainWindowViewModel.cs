@@ -35,7 +35,7 @@ namespace DupeNukem.ViewModels
             // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>
             {
-                // Invoke JavaScript functions:
+                // Invoke .NET --> JavaScript functions:
                 var result_add = await messenger.InvokeClientFunctionAsync<int>(
                     "js_add", 1, 2);
                 Trace.WriteLine($"js_add: {result_add}");
@@ -51,6 +51,15 @@ namespace DupeNukem.ViewModels
                 var result_array = await messenger.InvokeClientFunctionAsync<ConsoleKey[]>(
                     "js_array", new[] { ConsoleKey.Print, ConsoleKey.Enter, ConsoleKey.Escape });
                 Trace.WriteLine($"js_array: [{string.Join(",", result_array)}]");
+                try
+                {
+                    await messenger.InvokeClientFunctionAsync("aaa");
+                    Trace.WriteLine("BUG detected.");
+                }
+                catch (JavaScriptException)
+                {
+                    Trace.WriteLine("PASS: Unknown function invoking.");
+                }
             };
             // ----
 
@@ -87,6 +96,7 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
                     script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
                     script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
+                    // Invoke JavaScript --> .NET methods:
                     script.AppendLine("(async function () {");
                     script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
                     script.AppendLine("  console.log('add: ' + result_add);");
@@ -100,6 +110,12 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("  console.log('enum3: ' + result_enum3);");
                     script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
                     script.AppendLine("  console.log('array: ' + result_array);");
+                    script.AppendLine("  try {");
+                    script.AppendLine("    await invokeHostMethod('unknown', 12, 34, 56);");
+                    script.AppendLine("    console.log('BUG detected.');");
+                    script.AppendLine("  } catch (e) {");
+                    script.AppendLine("    console.log('PASS: Unknown method invoking.');");
+                    script.AppendLine("  }");
                     script.AppendLine("})();");
                     // ----
 

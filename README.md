@@ -156,6 +156,8 @@ Apache-v2.
 
 ## History
 
+* 0.4.0:
+  * Fixed invoking silent result with invalid method name.
 * 0.3.0:
   * Implemented flexible argument type handling.
 * 0.2.0:

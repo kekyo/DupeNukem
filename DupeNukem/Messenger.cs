@@ -261,6 +261,17 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
+        private void SendExceptionToClient(Message message, ExceptionBody responseBody)
+        {
+            var response = new Message(
+                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.serializer));
+
+            var tw = new StringWriter();
+            this.serializer.Serialize(tw, response);
+
+            this.SendMessageToClient(tw.ToString());
+        }
+
         public async void ReceivedRequest(string jsonString)
         {
             try
@@ -319,19 +330,22 @@ namespace DupeNukem
 
                                 this.SendMessageToClient(tw.ToString());
                             }
+                            else
+                            {
+                                var responseBody = new ExceptionBody(
+                                    "InvalidMethodName", $"Method \"{body.Name}\" is not found.",
+                                    string.Empty);
+
+                                this.SendExceptionToClient(message, responseBody);
+                            }
                         }
                         catch (Exception ex)
                         {
                             var responseBody = new ExceptionBody(
                                 ex.GetType().FullName!, ex.Message,
                                 this.SendExceptionWithStackTrace ? (ex.StackTrace ?? string.Empty) : string.Empty);
-                            var response = new Message(
-                                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.serializer));
 
-                            var tw = new StringWriter();
-                            this.serializer.Serialize(tw, response);
-
-                            this.SendMessageToClient(tw.ToString());
+                            this.SendExceptionToClient(message, responseBody);
                         }
                         break;
                 }

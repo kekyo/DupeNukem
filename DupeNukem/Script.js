@@ -36,6 +36,11 @@ class DupeNukem_Messenger__ {
         }
     }
 
+    sendExceptionToHost__(message, exceptionBody) {
+        this.sendToHostMessage__(JSON.stringify(
+            { id: message.id, type: "failed", body: exceptionBody, }))
+    }
+
     arrivedHostMesssage__(jsonString) {
         try {
             const message = JSON.parse(jsonString);
@@ -66,14 +71,35 @@ class DupeNukem_Messenger__ {
                 case "invoke":
                     try {
                         const ne = message.body.name.split(".");
-                        const ti = ne.slice(0, ne.length - 1).reduce(function (o, n) { return o[n]; }, window);
-                        ti[ne[ne.length - 1]].
-                            apply(ti, message.body.args).
-                            then(result => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
-                            catch(e => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "failed", body: { name: e.name, message: e.message, detail: e.toString() }, })));
+                        const ti = ne.
+                            slice(0, ne.length - 1).
+                            reduce(function (o, n) {
+                                if (o != undefined) {
+                                    const next = o[n];
+                                    if (next == undefined) {
+                                        this.sendExceptionToHost__(message, { name: "invalidFieldName", message: "Field \"" + n + "\" is not found.", detail: "", });
+                                    }
+                                    return next;
+                                }
+                                else {
+                                    return o;
+                                }
+                            }, window);
+                        if (ti != undefined) {
+                            const fn = ne[ne.length - 1];
+                            const f = ti[fn];
+                            if (f == undefined) {
+                                this.sendExceptionToHost__(message, { name: "invalidFunctionName", message: "Function \"" + fn + "\" is not found.", detail: "", });
+                            }
+                            else {
+                                f.apply(ti, message.body.args).
+                                    then(result => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
+                                    catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
+                            }
+                        }
                     }
                     catch (e) {
-                        this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "failed", body: { name: e.name, message: e.message, detail: e.toString() }, }));
+                        this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), });
                     }
                     break;
             }

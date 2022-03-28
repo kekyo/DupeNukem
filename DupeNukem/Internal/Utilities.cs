@@ -11,6 +11,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace DupeNukem.Internal
 {
@@ -43,42 +45,102 @@ namespace DupeNukem.Internal
             }
         }
 
-        //private abstract class ChangeType<T>
-        //{
-        //    public static readonly ChangeType<T> Instance;
+        ///////////////////////////////////////////////////////////////////////////////
 
-        //    static ChangeType() =>
-        //        Instance = typeof(T).IsEnum ?
-        //            new ChangeTypeForEnum<T>() :
-        //            new ChangeTypeByConverter<T>();
+        public static string GetName(Type type)
+        {
+            var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?
+                type.Name.Substring(0, index) : type.Name;
+            if (type.IsGenericType)
+            {
+                var gtns = string.Join(
+                    ",", type.GetGenericArguments().Select(GetName));
+                return $"{tn}<{gtns}>";
+            }
+            else
+            {
+                return $"{tn}";
+            }
+        }
 
-        //    public abstract T Change(object? value);
-        //}
+        public static string GetFullName(Type type)
+        {
+            var ns = type.DeclaringType is { } dt ?
+                GetFullName(dt) : type.Namespace;
+            var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?
+                type.Name.Substring(0, index) : type.Name;
+            if (type.IsGenericType)
+            {
+                var gtns = string.Join(
+                    ",", type.GetGenericArguments().Select(GetFullName));
+                return $"{ns}.{tn}<{gtns}>";
+            }
+            else
+            {
+                return $"{ns}.{tn}";
+            }
+        }
 
-        //private sealed class ChangeTypeForEnum<T> : ChangeType<T>
-        //{
-        //    private readonly Type underlyingType;
+        public static string GetName(MethodInfo method)
+        {
+            var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
+                method.Name.Substring(0, index) : method.Name;
+            if (method.IsGenericMethod)
+            {
+                var gtns = string.Join(
+                    ",", method.GetGenericArguments().Select(GetName));
+                return $"{mn}<{gtns}>";
+            }
+            else
+            {
+                return $"{mn}";
+            }
+        }
 
-        //    public ChangeTypeForEnum() =>
-        //        this.underlyingType = Enum.GetUnderlyingType(typeof(T));
+        public static string GetFullName(MethodInfo method)
+        {
+            var tn = method.DeclaringType is { } dt ?
+                GetFullName(dt) : "global";
+            var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
+                method.Name.Substring(0, index) : method.Name;
+            if (method.IsGenericMethod)
+            {
+                var gtns = string.Join(
+                    ",", method.GetGenericArguments().Select(GetFullName));
+                return $"{tn}.{mn}<{gtns}>";
+            }
+            else
+            {
+                return $"{tn}.{mn}";
+            }
+        }
 
-        //    public override T Change(object? value) =>
-        //        value is string str ?
-        //            (T)Enum.Parse(typeof(T), str) :
-        //            (T)(object)Convert.ChangeType(value, this.underlyingType)!;
-        //}
+        public static string GetMethodFullName(Delegate dlg) =>
+            GetFullName(dlg.Method);
 
-        //private sealed class ChangeTypeByConverter<T> : ChangeType<T>
-        //{
-        //    public override T Change(object? value) =>
-        //        (T)Convert.ChangeType(value, typeof(T))!;
-        //}
+        ///////////////////////////////////////////////////////////////////////////////
 
-        //public static T ConvertTo<T>(object? value) =>
-        //    value is T tv ? tv : ChangeType<T>.Instance.Change(value);
+        public struct MethodEntry
+        {
+            public string Name;
+            public MethodInfo Method;
+        }
 
-        public static string GetMethodName(Delegate dlg) =>
-            $"{dlg.Method.DeclaringType?.FullName ?? "global"}.{dlg.Method.Name}";
+        public static IEnumerable<MethodEntry> EnumerateTargetMethods(object target) =>
+            target.GetType().
+                Traverse(t => t.BaseType).
+                SelectMany(t => new[] { t }.Concat(t.GetInterfaces())).
+                SelectMany(t => t.GetMethods(
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)).
+                Select(method => new MethodEntry
+                {
+                    Method = method,
+                    Name = method.GetCustomAttribute(typeof(JavaScriptTargetAttribute), true) is JavaScriptTargetAttribute a ?
+                        (string.IsNullOrWhiteSpace(a.Name) ? GetName(method) : a.Name!) : null!,
+                }).
+                Where(entry => entry.Name != null);
+
+        ///////////////////////////////////////////////////////////////////////////////
 
         public static bool SafeTryGetValue<TKey, TValue>(
             this Dictionary<TKey, TValue> dict, TKey key, out TValue value)
@@ -107,6 +169,17 @@ namespace DupeNukem.Internal
             lock (dict)
             {
                 return dict.Remove(key);
+            }
+        }
+
+        public static IEnumerable<T> Traverse<T>(this T value, Func<T, T?> selector)
+            where T : class
+        {
+            T? current = value;
+            while (current != null)
+            {
+                yield return current;
+                current = selector(current);
             }
         }
     }

@@ -12,7 +12,6 @@
 using Epoxy;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace DupeNukem.ViewModels
@@ -35,7 +34,7 @@ namespace DupeNukem.ViewModels
             // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>
             {
-                // Invoke JavaScript functions:
+                // Invoke .NET --> JavaScript functions:
                 var result_add = await messenger.InvokeClientFunctionAsync<int>(
                     "js_add", 1, 2);
                 Trace.WriteLine($"js_add: {result_add}");
@@ -51,6 +50,15 @@ namespace DupeNukem.ViewModels
                 var result_array = await messenger.InvokeClientFunctionAsync<ConsoleKey[]>(
                     "js_array", new[] { ConsoleKey.Print, ConsoleKey.Enter, ConsoleKey.Escape });
                 Trace.WriteLine($"js_array: [{string.Join(",", result_array)}]");
+                try
+                {
+                    await messenger.InvokeClientFunctionAsync("unknown");
+                    Trace.WriteLine("BUG detected.");
+                }
+                catch (JavaScriptException)
+                {
+                    Trace.WriteLine("PASS: Unknown function invoking [unknown]");
+                }
             };
             // ----
 
@@ -87,6 +95,7 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
                     script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
                     script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
+                    // Invoke JavaScript --> .NET methods:
                     script.AppendLine("(async function () {");
                     script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
                     script.AppendLine("  console.log('add: ' + result_add);");
@@ -100,13 +109,43 @@ namespace DupeNukem.ViewModels
                     script.AppendLine("  console.log('enum3: ' + result_enum3);");
                     script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
                     script.AppendLine("  console.log('array: ' + result_array);");
+                    script.AppendLine("  try {");
+                    script.AppendLine("    await invokeHostMethod('unknown', 12, 34, 56);");
+                    script.AppendLine("    console.log('BUG detected.');");
+                    script.AppendLine("  } catch (e) {");
+                    script.AppendLine("    console.log('PASS: Unknown method invoking [unknown]');");
+                    script.AppendLine("  }");
+                    script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('DupeNukem.ViewModels.Calculator.add', 1, 2);");
+                    script.AppendLine("  console.log('fullName_calc.add: ' + result_fullName_calc_add);");
+                    script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('DupeNukem.ViewModels.Calculator.sub', 1, 2);");
+                    script.AppendLine("  console.log('fullName_calc.sub: ' + result_fullName_calc_sub);");
+                    script.AppendLine("  const result_calc_add = await invokeHostMethod('calc.add', 1, 2);");
+                    script.AppendLine("  console.log('calc.add: ' + result_calc_add);");
+                    script.AppendLine("  const result_calc_sub = await invokeHostMethod('calc.sub', 1, 2);");
+                    script.AppendLine("  console.log('calc.sub: ' + result_calc_sub);");
+                    script.AppendLine("  try {");
+                    script.AppendLine("    await invokeHostMethod('calc.mult', 1, 2);");
+                    script.AppendLine("    console.log('BUG detected.');");
+                    script.AppendLine("  } catch (e) {");
+                    script.AppendLine("    console.log('PASS: Unknown method invoking [calc.mult]');");
+                    script.AppendLine("  }");
                     script.AppendLine("})();");
                     // ----
 
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());
 
-                    // Register .NET side methods:
+                    // =========================================
+                    // Register an object:
+
+                    // name: `DupeNukem.ViewModels.Calculator.add`, `DupeNukem.ViewModels.Calculator.sub`
+                    var calculator = new Calculator();
+                    messenger.RegisterObject(calculator);
+
+                    // name: `calc.add`, `calc.sub`
+                    messenger.RegisterObject("calc", calculator);
+
+                    // ---- Or, register .NET side methods:
 
                     // name: `DupeNukem.ViewModels.MainWindowViewModel.Add`
                     messenger.RegisterFunc<int, int, int>(this.Add);
@@ -119,35 +158,30 @@ namespace DupeNukem.ViewModels
                     // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
                     messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(this.Array);
 
-                    // Or, register directly delegate with method name.
+                    // ---- Or, register directly delegate with method name.
                     messenger.RegisterFunc<int, int, int>(
                         "add",
-                        (a, b) => Task.FromResult(a + b));
+                        async (a, b) => { await Task.Delay(100); return a + b; });
                     messenger.RegisterFunc<int, int, int>(
                         "sub",
-                        (a, b) => Task.FromResult(a - b));
+                        async (a, b) => { await Task.Delay(100); return a - b; });
                     messenger.RegisterFunc<int, ConsoleKey>(
                         "fromEnum",
-                        key => Task.FromResult((int)key));
+                        async key => { await Task.Delay(100); return (int)key; });
                     messenger.RegisterFunc<ConsoleKey, int> (
                         "toEnum",
-                        key => Task.FromResult((ConsoleKey)key));
+                        async key => { await Task.Delay(100); return (ConsoleKey)key; });
                     messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]> (
                         "array",
-                        keys => Task.FromResult(keys));
+                        async keys => { await Task.Delay(100); return keys; });
                 });
             });
         }
 
-        public Task<int> Add(int a, int b) =>
-            Task.FromResult(a + b);
-        public Task<int> Sub(int a, int b) =>
-            Task.FromResult(a - b);
-        public Task<int> FromEnum(ConsoleKey key) =>
-            Task.FromResult((int)key);
-        public Task<ConsoleKey> ToEnum(int key) =>
-            Task.FromResult((ConsoleKey)key);
-        public Task<ConsoleKey[]> Array(ConsoleKey[] keys) =>
-            Task.FromResult(keys);
+        public async Task<int> Add(int a, int b) { await Task.Delay(100); return a + b; }
+        public async Task<int> Sub(int a, int b) { await Task.Delay(100); return a - b; }
+        public async Task<int> FromEnum(ConsoleKey key) { await Task.Delay(100); return (int)key; }
+        public async Task<ConsoleKey> ToEnum(int key) { await Task.Delay(100); return (ConsoleKey)key; }
+        public async Task<ConsoleKey[]> Array(ConsoleKey[] keys) { await Task.Delay(100); return keys; }
     }
 }

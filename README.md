@@ -22,7 +22,7 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 
 ## What is this?
 
-General purpose `WebView` attachable independent messaging library.
+General purpose `WebView` attachable independent messaging (RPC like) library.
 
 * Made full-duplex and asynchronous messaging between .NET WebView and JavaScript.
   * In .NET side, all function calls are made with `Task`.
@@ -42,9 +42,11 @@ Invoke JavaScript functions from .NET side:
 // Invoke JavaScript functions:
 
 var result_add = await messenger.InvokeClientFunctionAsync<int>(
-    "js_add", 1, 2);
+    "js_add",
+    1, 2);
 var result_sub = await messenger.InvokeClientFunctionAsync<int>(
-    "js_sub", 1, 2);
+    "js_sub",
+    1, 2);
 ```
 
 Invoke .NET methods from JavaScript side:
@@ -56,12 +58,13 @@ Invoke .NET methods from JavaScript side:
 // so we can handle asynchronous operation naturally.
 
 // `Add` method
-const result_Add_ = await invokeHostMethod(
-    "DupeNukem.ViewModels.MainWindowViewModel.Add",
+const result_Add = await invokeHostMethod(
+    "DupeNukem.ViewModels.Calculator.Add",
     1, 2);
 // `dotnet_add` delegate
-const result_add_ = await invokeHostMethod(
-    "dotnet_add", 1, 2);
+const result_add = await invokeHostMethod(
+    "dotnet_add",
+    1, 2);
 ```
 
 Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
@@ -101,13 +104,46 @@ await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
     messenger.GetInjectionScript().ToString());
 ```
 
-### Register methods/functions
+----
+
+## Register methods/functions
+
+Bulk register methods on an object:
+
+* Easy way, recommended.
+
+```csharp
+// Apply `JavaScriptTarget` attribute on target callee method.
+public class Calculator
+{
+    [JavaScriptTarget]
+    public Task<int> Add(int a, int b)
+    {
+        // ...
+    }
+
+    [JavaScriptTarget("Sub")]
+    public Task<int> __Sub__123(int a, int b)
+    {
+        // ...
+    }
+}
+
+////////////////////////////////////////
+
+// name: `DupeNukem.ViewModels.Calculator.Add`, `DupeNukem.ViewModels.Calculator.Sub`
+var calculator = new Calculator();
+messenger.RegisterObject(calculator);
+
+// name: `calc.Add`, `calc.Sub`
+messenger.RegisterObject("calc", calculator);
+```
 
 Register methods around .NET side:
 
-```csharp
-// Register .NET side methods:
+* Strict declarative each methods.
 
+```csharp
 // name: `DupeNukem.ViewModels.MainWindowViewModel.Add`
 messenger.RegisterFunc<int, int, int>(this.Add);
 // name: `DupeNukem.ViewModels.MainWindowViewModel.Sub`
@@ -156,6 +192,8 @@ Apache-v2.
 
 ## History
 
+* 0.5.0:
+  * New bulk register methods on an object by `RegisterObject(obj)` method.
 * 0.4.0:
   * Fixed invoking silent result with invalid method name.
 * 0.3.0:

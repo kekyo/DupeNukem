@@ -13,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace DupeNukem.Internal
@@ -186,6 +187,34 @@ namespace DupeNukem.Internal
                 base.ToObject<T2>(args[2]),
                 base.ToObject<T3>(args[3])).
                 ConfigureAwait(false))!;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class ObjectMethodDescriptor : MethodDescriptor
+    {
+        private readonly object target;
+        private readonly MethodInfo method;
+        private readonly Type[] parameterTypes;
+
+        public ObjectMethodDescriptor(object target, MethodInfo method)
+        {
+            this.target = target;
+            this.method = method;
+            this.parameterTypes = this.method.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            var cas = args.
+                Select((arg, index) => this.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            var task = (Task)this.method.Invoke(this.target, cas)!;
+            return await TaskResultGetter.GetResultAsync(task);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////

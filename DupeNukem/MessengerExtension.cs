@@ -112,7 +112,7 @@ namespace DupeNukem
         {
             foreach (var entry in Utilities.EnumerateTargetMethods(target))
             {
-                var methodName = $"{name}.{entry.Name}";
+                var methodName = string.IsNullOrWhiteSpace(name) ? entry.Name : $"{name}.{entry.Name}";
                 messenger.RegisterMethod(methodName, new ObjectMethodDescriptor(target, entry.Method));
             }
         }
@@ -126,7 +126,7 @@ namespace DupeNukem
         {
             foreach (var entry in Utilities.EnumerateTargetMethods(target))
             {
-                var methodName = $"{name}.{entry.Name}";
+                var methodName = string.IsNullOrWhiteSpace(name) ? entry.Name : $"{name}.{entry.Name}";
                 messenger.UnregisterMethod(methodName);
             }
         }

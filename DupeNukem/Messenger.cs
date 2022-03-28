@@ -11,7 +11,9 @@
 
 using DupeNukem.Internal;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -74,19 +76,29 @@ namespace DupeNukem
         private readonly Queue<WeakReference<SuspendingDescriptor>> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
-        private readonly JsonSerializer serializer;
         private volatile int id;
+
+        internal readonly JsonSerializer serializer;
 
         ///////////////////////////////////////////////////////////////////////////////
 
         public Messenger(TimeSpan? timeoutDuration = default)
         {
+            var namingStrategy = new CamelCaseNamingStrategy();
             this.serializer = new JsonSerializer
             {
+                DateFormatHandling = DateFormatHandling.IsoDateFormat,
+                DateParseHandling = DateParseHandling.DateTimeOffset,
+                DateTimeZoneHandling = DateTimeZoneHandling.Local,
+                NullValueHandling = NullValueHandling.Include,
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                ContractResolver = new DefaultContractResolver { NamingStrategy = namingStrategy, },
 #if DEBUG
                 Formatting = Formatting.Indented,
 #endif
             };
+            this.serializer.Converters.Add(new StringEnumConverter(namingStrategy));
+
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
 
@@ -296,7 +308,7 @@ namespace DupeNukem
                         if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                         {
                             this.suspendings.SafeRemove(message.Id);
-                            var error = message.Body!.ToObject<ExceptionBody>();
+                            var error = message.Body!.ToObject<ExceptionBody>(this.serializer);
                             try
                             {
                                 throw new JavaScriptException(error.Name, error.Message, error.Detail);
@@ -314,7 +326,7 @@ namespace DupeNukem
                     case MessageTypes.Invoke:
                         try
                         {
-                            var body = message.Body!.ToObject<InvokeBody>();
+                            var body = message.Body!.ToObject<InvokeBody>(this.serializer);
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {

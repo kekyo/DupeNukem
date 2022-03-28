@@ -73,7 +73,7 @@ namespace DupeNukem
     {
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
-        private readonly Queue<WeakReference<SuspendingDescriptor>> timeoutQueue = new();
+        private readonly Queue<WeakReference> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
         private volatile int id;
@@ -108,7 +108,7 @@ namespace DupeNukem
                 this.CancelAllSuspending();
 
                 this.Ready?.Invoke(this, EventArgs.Empty);
-                return Task.CompletedTask;
+                return Utilities.CompletedTask;
             });
         }
 
@@ -162,7 +162,7 @@ namespace DupeNukem
                 while (this.timeoutQueue.Count >= 1)
                 {
                     var wr = this.timeoutQueue.Dequeue();
-                    if (wr.TryGetTarget(out var descriptor))
+                    if (wr.Target is SuspendingDescriptor descriptor)
                     {
                         descriptor.Cancel();
                     }
@@ -178,14 +178,14 @@ namespace DupeNukem
                 while (this.timeoutQueue.Count >= 1)
                 {
                     var wr = this.timeoutQueue.Peek();
-                    if (wr.TryGetTarget(out var descriptor))
+                    if (wr.Target is SuspendingDescriptor descriptor)
                     {
                         var past = now - descriptor.Created;
                         var remains = this.timeoutDuration - past;
                         if (remains > TimeSpan.Zero)
                         {
                             this.timeoutTimer.Change(
-                                remains, Timeout.InfiniteTimeSpan);
+                                remains, Utilities.InfiniteTimeSpan);
                             break;
                         }
 
@@ -217,12 +217,11 @@ namespace DupeNukem
         {
             lock (this.timeoutQueue)
             {
-                this.timeoutQueue.Enqueue(
-                    new WeakReference<SuspendingDescriptor>(descriptor));
+                this.timeoutQueue.Enqueue(new WeakReference(descriptor));
                 if (this.timeoutQueue.Count == 1)
                 {
                     this.timeoutTimer.Change(
-                        this.timeoutDuration, Timeout.InfiniteTimeSpan);
+                        this.timeoutDuration, Utilities.InfiniteTimeSpan);
                 }
             }
 

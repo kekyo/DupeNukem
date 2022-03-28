@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DupeNukem.Internal
 {
@@ -53,7 +55,7 @@ namespace DupeNukem.Internal
                 type.Name.Substring(0, index) : type.Name;
             if (type.IsGenericType)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", type.GetGenericArguments().Select(GetName));
                 return $"{tn}<{gtns}>";
             }
@@ -71,7 +73,7 @@ namespace DupeNukem.Internal
                 type.Name.Substring(0, index) : type.Name;
             if (type.IsGenericType)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", type.GetGenericArguments().Select(GetFullName));
                 return $"{ns}.{tn}<{gtns}>";
             }
@@ -87,7 +89,7 @@ namespace DupeNukem.Internal
                 method.Name.Substring(0, index) : method.Name;
             if (method.IsGenericMethod)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", method.GetGenericArguments().Select(GetName));
                 return $"{mn}<{gtns}>";
             }
@@ -105,7 +107,7 @@ namespace DupeNukem.Internal
                 method.Name.Substring(0, index) : method.Name;
             if (method.IsGenericMethod)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", method.GetGenericArguments().Select(GetFullName));
                 return $"{tn}.{mn}<{gtns}>";
             }
@@ -135,10 +137,10 @@ namespace DupeNukem.Internal
                 Select(method => new MethodEntry
                 {
                     Method = method,
-                    MethodName = method.GetCustomAttribute(typeof(JavaScriptTargetAttribute), true) is JavaScriptTargetAttribute a ?
-                        (string.IsNullOrWhiteSpace(a.Name) ?
-                            GetName(method) : a.Name!) :
-                        null!,
+                    MethodName = method.GetCustomAttributes(typeof(JavaScriptTargetAttribute), true) is object[] cas &&
+                        cas.Length >= 1 && cas[0] is JavaScriptTargetAttribute a ?
+                            (IsNullOrWhiteSpace(a.Name) ? GetName(method) : a.Name!) :
+                            null!,
                 }).
                 Where(entry => entry.MethodName != null);
 
@@ -184,5 +186,37 @@ namespace DupeNukem.Internal
                 current = selector(current);
             }
         }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public static Task CompletedTask =>
+#if NET35 || NET40
+            TaskEx.FromResult(0);
+#elif NET45
+            Task.FromResult(0);
+#else
+            Task.CompletedTask;
+#endif
+
+        public static bool IsNullOrWhiteSpace(string? str) =>
+#if NET35
+            string.IsNullOrEmpty(str) || str!.Trim().Length == 0;
+#else
+            string.IsNullOrWhiteSpace(str);
+#endif
+
+        public static string Join<T>(string separator, IEnumerable<T> enumerable) =>
+#if NET35
+            string.Join(separator, enumerable.Select(v => v?.ToString() ?? string.Empty).ToArray());
+#else
+            string.Join(separator, enumerable);
+#endif
+
+        public static readonly TimeSpan InfiniteTimeSpan =
+#if NET35 || NET40
+            new TimeSpan(0, 0, 0, 0, -1);
+#else
+            Timeout.InfiniteTimeSpan;
+#endif
     }
 }

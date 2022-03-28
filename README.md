@@ -38,7 +38,7 @@ Similarly, JavaScript side to call a method on the .NET side, the `invokeHostMet
 
 ![.NET world to JavaScript invoking](Images/diagram2.png)
 
-Both .NET and JavaScript, we can design methods and functions assuming a nearly identical structure.
+It is complemental design. Both .NET and JavaScript, we can design methods and functions assuming a nearly identical structure.
 And with DupeNukem, you can use it for multi-platform `WebView` based applications without having to use different implementations for each `WebView` interface. The implementation can be standardized.
 
 This may seem simple at first glance, but there are some difficult issues to be addressed, such as the following:

@@ -161,8 +161,8 @@ namespace DupeNukem
             return n;
         }
 
-        public void UnregisterMethod(string name, bool hasSpecifiedName) =>
-            this.methods.SafeRemove(this.memberAccessNamingStrategy.GetConvertedName(name, false));
+        internal void UnregisterMethod(string name, bool hasSpecifiedName) =>
+            this.methods.SafeRemove(this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName));
 
         public string[] RegisteredMethods
         {

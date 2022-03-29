@@ -82,10 +82,10 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public Messenger(TimeSpan? timeoutDuration = default)
+        public static JsonSerializer GetDefaultJsonSerializer()
         {
             var namingStrategy = new CamelCaseNamingStrategy();
-            this.serializer = new JsonSerializer
+            var serializer = new JsonSerializer
             {
                 DateFormatHandling = DateFormatHandling.IsoDateFormat,
                 DateParseHandling = DateParseHandling.DateTimeOffset,
@@ -97,8 +97,18 @@ namespace DupeNukem
                 Formatting = Formatting.Indented,
 #endif
             };
-            this.serializer.Converters.Add(new StringEnumConverter(namingStrategy));
+            serializer.Converters.Add(new StringEnumConverter(namingStrategy));
+            return serializer;
+        }
 
+        public Messenger(TimeSpan? timeoutDuration = default) :
+            this(GetDefaultJsonSerializer(), timeoutDuration)
+        {
+        }
+
+        public Messenger(JsonSerializer serializer, TimeSpan? timeoutDuration = default)
+        {
+            this.serializer = serializer;
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
 

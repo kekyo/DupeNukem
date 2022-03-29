@@ -206,6 +206,10 @@ Apache-v2.
 
 ## History
 
+* 0.5.0:
+  * Supported customize json format with `JsonSerializer` and made defaults with camel-casing serialization.
+  * Made defaults for all symbol naming to camel case.
+  * Added more target platforms.
 * 0.4.0:
   * New bulk register methods on an object by `RegisterObject(obj)` method.
   * Fixed invoking silent result with invalid method name.

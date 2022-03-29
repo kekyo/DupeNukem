@@ -71,6 +71,9 @@ namespace DupeNukem
 
     public sealed class Messenger : IDisposable
     {
+        private static readonly NamingStrategy defaultNamingStrategy =
+            new CamelCaseNamingStrategy();
+
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
         private readonly Queue<WeakReference> timeoutQueue = new();
@@ -79,12 +82,12 @@ namespace DupeNukem
         private volatile int id;
 
         internal readonly JsonSerializer serializer;
+        internal readonly NamingStrategy memberAccessNamingStrategy;
 
         ///////////////////////////////////////////////////////////////////////////////
 
         public static JsonSerializer GetDefaultJsonSerializer()
         {
-            var namingStrategy = new CamelCaseNamingStrategy();
             var serializer = new JsonSerializer
             {
                 DateFormatHandling = DateFormatHandling.IsoDateFormat,
@@ -92,23 +95,27 @@ namespace DupeNukem
                 DateTimeZoneHandling = DateTimeZoneHandling.Local,
                 NullValueHandling = NullValueHandling.Include,
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
-                ContractResolver = new DefaultContractResolver { NamingStrategy = namingStrategy, },
+                ContractResolver = new DefaultContractResolver { NamingStrategy = defaultNamingStrategy, },
 #if DEBUG
                 Formatting = Formatting.Indented,
 #endif
             };
-            serializer.Converters.Add(new StringEnumConverter(namingStrategy));
+            serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
             return serializer;
         }
 
         public Messenger(TimeSpan? timeoutDuration = default) :
-            this(GetDefaultJsonSerializer(), timeoutDuration)
+            this(GetDefaultJsonSerializer(), defaultNamingStrategy, timeoutDuration)
         {
         }
 
-        public Messenger(JsonSerializer serializer, TimeSpan? timeoutDuration = default)
+        public Messenger(
+            JsonSerializer serializer,
+            NamingStrategy memberAccessNamingStrategy,
+            TimeSpan? timeoutDuration)
         {
             this.serializer = serializer;
+            this.memberAccessNamingStrategy = memberAccessNamingStrategy;
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
 
@@ -146,14 +153,16 @@ namespace DupeNukem
             return new StringBuilder(tr.ReadToEnd());
         }
 
-        internal string RegisterMethod(string name, MethodDescriptor method)
+        internal string RegisterMethod(
+            string name, MethodDescriptor method, bool hasSpecifiedName)
         {
-            this.methods.SafeAdd(name, method);
-            return name;
+            var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            this.methods.SafeAdd(n, method);
+            return n;
         }
 
-        public void UnregisterMethod(string name) =>
-            this.methods.SafeRemove(name);
+        public void UnregisterMethod(string name, bool hasSpecifiedName) =>
+            this.methods.SafeRemove(this.memberAccessNamingStrategy.GetConvertedName(name, false));
 
         public string[] RegisteredMethods
         {

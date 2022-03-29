@@ -67,7 +67,7 @@ namespace DupeNukem.ViewModels
                     // =========================================
                     // Register an object:
 
-                    // name: `DupeNukem.ViewModels.Calculator.add`, `DupeNukem.ViewModels.Calculator.sub`
+                    // name: `dupeNukem.viewModels.calculator.add`, `dupeNukem.viewModels.calculator.sub`
                     var calculator = new Calculator();
                     messenger.RegisterObject(calculator);
 
@@ -76,15 +76,15 @@ namespace DupeNukem.ViewModels
 
                     // ---- Or, register .NET side methods:
 
-                    // name: `DupeNukem.ViewModels.MainWindowViewModel.Add`
+                    // name: `dupeNukem.viewModels.mainWindowViewModel.add`
                     messenger.RegisterFunc<int, int, int>(this.Add);
-                    // name: `DupeNukem.ViewModels.MainWindowViewModel.Sub`
+                    // name: `dupeNukem.viewModels.mainWindowViewModel.sub`
                     messenger.RegisterFunc<int, int, int>(this.Sub);
-                    // name: `DupeNukem.ViewModels.MainWindowViewModel.FromEnum`
+                    // name: `dupeNukem.viewModels.mainWindowViewModel.fromEnum`
                     messenger.RegisterFunc<int, ConsoleKey>(this.FromEnum);
-                    // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
+                    // name: `dupeNukem.viewModels.mainWindowViewModel.toEnum`
                     messenger.RegisterFunc<ConsoleKey, int>(this.ToEnum);
-                    // name: `DupeNukem.ViewModels.MainWindowViewModel.ToEnum`
+                    // name: `dupeNukem.viewModels.mainWindowViewModel.toEnum`
                     messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(this.Array);
 
                     // ---- Or, register directly delegate with method name.
@@ -180,9 +180,9 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  } catch (e) {");
             script.AppendLine("    console.log('PASS: Unknown method invoking [unknown]');");
             script.AppendLine("  }");
-            script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('DupeNukem.ViewModels.Calculator.add', 1, 2);");
+            script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('dupeNukem.viewModels.calculator.add', 1, 2);");
             script.AppendLine("  console.log('fullName_calc.add: ' + result_fullName_calc_add);");
-            script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('DupeNukem.ViewModels.Calculator.sub', 1, 2);");
+            script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('dupeNukem.viewModels.calculator.sub', 1, 2);");
             script.AppendLine("  console.log('fullName_calc.sub: ' + result_fullName_calc_sub);");
             script.AppendLine("  const result_calc_add = await invokeHostMethod('calc.add', 1, 2);");
             script.AppendLine("  console.log('calc.add: ' + result_calc_add);");

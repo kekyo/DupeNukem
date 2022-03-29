@@ -9,6 +9,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,7 +129,29 @@ namespace DupeNukem.Internal
             public MethodInfo Method;
         }
 
-        public static IEnumerable<MethodEntry> EnumerateTargetMethods(object target) =>
+        public static string GetConvertedName(
+            this NamingStrategy ns, string name, bool hasSpecifiedName = false) =>
+            Join(".", name.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).
+                Select(element => ns.GetPropertyName(element, hasSpecifiedName)));
+
+        private static string GetMethodName(
+            MethodInfo method, string? specifiedName, bool isFullName, NamingStrategy ns)
+        {
+            if (IsNullOrWhiteSpace(specifiedName))
+            {
+                var methodName = isFullName ? GetFullName(method) : GetName(method);
+                return ns.GetConvertedName(methodName);
+            }
+            else
+            {
+                var scopeName = method.DeclaringType is { } dt ?
+                    ns.GetConvertedName(GetFullName(dt)) : "global";
+                return isFullName ? $"{scopeName}.{specifiedName}" : specifiedName!;
+            }
+        }
+
+        public static IEnumerable<MethodEntry> EnumerateTargetMethods(
+            object target, bool isFullName, NamingStrategy memberAccessNamingStrategy) =>
             target.GetType().
                 Traverse(t => t.BaseType).
                 SelectMany(t => new[] { t }.Concat(t.GetInterfaces())).
@@ -139,7 +162,7 @@ namespace DupeNukem.Internal
                     Method = method,
                     MethodName = method.GetCustomAttributes(typeof(JavaScriptTargetAttribute), true) is object[] cas &&
                         cas.Length >= 1 && cas[0] is JavaScriptTargetAttribute a ?
-                            (IsNullOrWhiteSpace(a.Name) ? GetName(method) : a.Name!) :
+                            GetMethodName(method, a.Name, isFullName, memberAccessNamingStrategy) :
                             null!,
                 }).
                 Where(entry => entry.MethodName != null);

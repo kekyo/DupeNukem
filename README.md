@@ -24,7 +24,7 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 
 General purpose `WebView` attachable independent messaging (RPC like) library.
 
-This library is intended for use with a browser component called `WebView` where asynchronous interoperation is not possible or is limited.
+This library is intended for use with a browser component called `WebView` (Edge2, CefSharp, Android, Celenium and etc) where asynchronous interoperation is not possible or is limited.
 It is also independent of any specific `WebView` implementation, so it can be applied to any `WebView` you use.
 The only requirement is to be able to send and receive strings to and from each other.
 
@@ -38,7 +38,7 @@ Similarly, JavaScript side to call a method on the .NET side, the `invokeHostMet
 
 ![.NET world to JavaScript invoking](Images/diagram2.png)
 
-Both .NET and JavaScript, we can design methods and functions assuming a nearly identical structure.
+It is complemental design. Both .NET and JavaScript, we can design methods and functions assuming a nearly identical structure.
 And with DupeNukem, you can use it for multi-platform `WebView` based applications without having to use different implementations for each `WebView` interface. The implementation can be standardized.
 
 This may seem simple at first glance, but there are some difficult issues to be addressed, such as the following:
@@ -192,6 +192,10 @@ TODO:
 
 TODO:
 
+### Celenium WebDriver on .NET
+
+TODO:
+
 ----
 
 ## License
@@ -202,6 +206,10 @@ Apache-v2.
 
 ## History
 
+* 0.5.0:
+  * Supported customize json format with `JsonSerializer` and made defaults with camel-casing serialization.
+  * Made defaults for all symbol naming to camel case.
+  * Added more target platforms.
 * 0.4.0:
   * New bulk register methods on an object by `RegisterObject(obj)` method.
   * Fixed invoking silent result with invalid method name.

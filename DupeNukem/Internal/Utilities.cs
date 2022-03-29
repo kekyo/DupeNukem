@@ -9,10 +9,13 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DupeNukem.Internal
 {
@@ -53,7 +56,7 @@ namespace DupeNukem.Internal
                 type.Name.Substring(0, index) : type.Name;
             if (type.IsGenericType)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", type.GetGenericArguments().Select(GetName));
                 return $"{tn}<{gtns}>";
             }
@@ -71,7 +74,7 @@ namespace DupeNukem.Internal
                 type.Name.Substring(0, index) : type.Name;
             if (type.IsGenericType)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", type.GetGenericArguments().Select(GetFullName));
                 return $"{ns}.{tn}<{gtns}>";
             }
@@ -87,7 +90,7 @@ namespace DupeNukem.Internal
                 method.Name.Substring(0, index) : method.Name;
             if (method.IsGenericMethod)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", method.GetGenericArguments().Select(GetName));
                 return $"{mn}<{gtns}>";
             }
@@ -105,7 +108,7 @@ namespace DupeNukem.Internal
                 method.Name.Substring(0, index) : method.Name;
             if (method.IsGenericMethod)
             {
-                var gtns = string.Join(
+                var gtns = Join(
                     ",", method.GetGenericArguments().Select(GetFullName));
                 return $"{tn}.{mn}<{gtns}>";
             }
@@ -122,11 +125,33 @@ namespace DupeNukem.Internal
 
         public struct MethodEntry
         {
-            public string Name;
+            public string MethodName;
             public MethodInfo Method;
         }
 
-        public static IEnumerable<MethodEntry> EnumerateTargetMethods(object target) =>
+        public static string GetConvertedName(
+            this NamingStrategy ns, string name, bool hasSpecifiedName = false) =>
+            Join(".", name.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).
+                Select(element => ns.GetPropertyName(element, hasSpecifiedName)));
+
+        private static string GetMethodName(
+            MethodInfo method, string? specifiedName, bool isFullName, NamingStrategy ns)
+        {
+            if (IsNullOrWhiteSpace(specifiedName))
+            {
+                var methodName = isFullName ? GetFullName(method) : GetName(method);
+                return ns.GetConvertedName(methodName);
+            }
+            else
+            {
+                var scopeName = method.DeclaringType is { } dt ?
+                    ns.GetConvertedName(GetFullName(dt)) : "global";
+                return isFullName ? $"{scopeName}.{specifiedName}" : specifiedName!;
+            }
+        }
+
+        public static IEnumerable<MethodEntry> EnumerateTargetMethods(
+            object target, bool isFullName, NamingStrategy memberAccessNamingStrategy) =>
             target.GetType().
                 Traverse(t => t.BaseType).
                 SelectMany(t => new[] { t }.Concat(t.GetInterfaces())).
@@ -135,10 +160,12 @@ namespace DupeNukem.Internal
                 Select(method => new MethodEntry
                 {
                     Method = method,
-                    Name = method.GetCustomAttribute(typeof(JavaScriptTargetAttribute), true) is JavaScriptTargetAttribute a ?
-                        (string.IsNullOrWhiteSpace(a.Name) ? GetName(method) : a.Name!) : null!,
+                    MethodName = method.GetCustomAttributes(typeof(JavaScriptTargetAttribute), true) is object[] cas &&
+                        cas.Length >= 1 && cas[0] is JavaScriptTargetAttribute a ?
+                            GetMethodName(method, a.Name, isFullName, memberAccessNamingStrategy) :
+                            null!,
                 }).
-                Where(entry => entry.Name != null);
+                Where(entry => entry.MethodName != null);
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -182,5 +209,37 @@ namespace DupeNukem.Internal
                 current = selector(current);
             }
         }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public static Task CompletedTask =>
+#if NET35 || NET40
+            TaskEx.FromResult(0);
+#elif NET45
+            Task.FromResult(0);
+#else
+            Task.CompletedTask;
+#endif
+
+        public static bool IsNullOrWhiteSpace(string? str) =>
+#if NET35
+            string.IsNullOrEmpty(str) || str!.Trim().Length == 0;
+#else
+            string.IsNullOrWhiteSpace(str);
+#endif
+
+        public static string Join<T>(string separator, IEnumerable<T> enumerable) =>
+#if NET35
+            string.Join(separator, enumerable.Select(v => v?.ToString() ?? string.Empty).ToArray());
+#else
+            string.Join(separator, enumerable);
+#endif
+
+        public static readonly TimeSpan InfiniteTimeSpan =
+#if NET35 || NET40
+            new TimeSpan(0, 0, 0, 0, -1);
+#else
+            Timeout.InfiniteTimeSpan;
+#endif
     }
 }

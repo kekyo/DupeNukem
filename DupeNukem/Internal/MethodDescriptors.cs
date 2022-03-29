@@ -9,6 +9,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Diagnostics;
@@ -20,12 +21,17 @@ namespace DupeNukem.Internal
 {
     internal abstract class MethodDescriptor
     {
+        private readonly JsonSerializer serializer;
+
+        protected MethodDescriptor(JsonSerializer serializer) =>
+            this.serializer = serializer;
+
         public abstract Task<object?> InvokeAsync(JToken?[] args);
 
         protected T ToObject<T>(JToken? arg) =>
-            (arg != null) ? arg.ToObject<T>()! : default(T)!;
+            (arg != null) ? arg.ToObject<T>(this.serializer)! : default(T)!;
         protected object? ToObject(JToken? arg, Type type) =>
-            (arg != null) ? arg.ToObject(type) : Utilities.GetDefaultValue(type);
+            (arg != null) ? arg.ToObject(type, this.serializer) : Utilities.GetDefaultValue(type);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -34,7 +40,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<Task> action;
 
-        public ActionDescriptor(Func<Task> action) =>
+        public ActionDescriptor(Func<Task> action, JsonSerializer serializer) :
+            base(serializer) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -49,7 +56,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, Task> action;
 
-        public ActionDescriptor(Func<T0, Task> action) =>
+        public ActionDescriptor(Func<T0, Task> action, JsonSerializer serializer) :
+            base(serializer) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -65,7 +73,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, Task> action) =>
+        public ActionDescriptor(Func<T0, T1, Task> action, JsonSerializer serializer) :
+            base(serializer) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -82,7 +91,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, T2, Task> action) =>
+        public ActionDescriptor(Func<T0, T1, T2, Task> action, JsonSerializer serializer) :
+            base(serializer) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -100,7 +110,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, T3, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, T2, T3, Task> action) =>
+        public ActionDescriptor(Func<T0, T1, T2, T3, Task> action, JsonSerializer serializer) :
+            base(serializer) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -121,13 +132,15 @@ namespace DupeNukem.Internal
     {
         private readonly Func<Task<TR>> func;
 
-        public FuncDescriptor(Func<Task<TR>> func) =>
+        public FuncDescriptor(Func<Task<TR>> func, JsonSerializer serializer) :
+            base(serializer) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
         {
             Debug.Assert(args.Length == 0);
-            return await this.func().ConfigureAwait(false);
+            return await this.func().
+                ConfigureAwait(false);
         }
     }
 
@@ -135,7 +148,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, Task<TR>> func) =>
+        public FuncDescriptor(Func<T0, Task<TR>> func, JsonSerializer serializer) :
+            base(serializer) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args) =>
@@ -148,7 +162,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, Task<TR>> func) =>
+        public FuncDescriptor(Func<T0, T1, Task<TR>> func, JsonSerializer serializer) :
+            base(serializer) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args) =>
@@ -162,7 +177,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, T2, Task<TR>> func) =>
+        public FuncDescriptor(Func<T0, T1, T2, Task<TR>> func, JsonSerializer serializer) :
+            base(serializer) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args) =>
@@ -177,7 +193,8 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, T3, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, T2, T3, Task<TR>> func) =>
+        public FuncDescriptor(Func<T0, T1, T2, T3, Task<TR>> func, JsonSerializer serializer) :
+            base(serializer) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args) =>
@@ -197,7 +214,9 @@ namespace DupeNukem.Internal
         private readonly MethodInfo method;
         private readonly Type[] parameterTypes;
 
-        public ObjectMethodDescriptor(object target, MethodInfo method)
+        public ObjectMethodDescriptor(
+            object target, MethodInfo method, JsonSerializer serializer) :
+            base(serializer)
         {
             this.target = target;
             this.method = method;
@@ -210,7 +229,7 @@ namespace DupeNukem.Internal
         public override async Task<object?> InvokeAsync(JToken?[] args)
         {
             var cas = args.
-                Select((arg, index) => this.ToObject(arg, this.parameterTypes[index])).
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
                 ToArray();
             var task = (Task)this.method.Invoke(this.target, cas)!;
             return await TaskResultGetter.GetResultAsync(task);
@@ -224,7 +243,8 @@ namespace DupeNukem.Internal
         private readonly Delegate method;
         private readonly Type[] parameterTypes;
 
-        public DynamicMethodDescriptor(Delegate method)
+        public DynamicMethodDescriptor(Delegate method, JsonSerializer serializer) :
+            base(serializer)
         {
             this.method = method;
             this.parameterTypes = this.method.Method.
@@ -236,7 +256,7 @@ namespace DupeNukem.Internal
         public override async Task<object?> InvokeAsync(JToken?[] args)
         {
             var cas = args.
-                Select((arg, index) => this.ToObject(arg, this.parameterTypes[index])).
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
                 ToArray();
             await ((Task)this.method.DynamicInvoke(cas)!).
                 ConfigureAwait(false);
@@ -249,7 +269,8 @@ namespace DupeNukem.Internal
         private readonly Delegate method;
         private readonly Type[] parameterTypes;
 
-        public DynamicMethodDescriptor(Delegate method)
+        public DynamicMethodDescriptor(Delegate method, JsonSerializer serializer) :
+            base(serializer)
         {
             this.method = method;
             this.parameterTypes = this.method.Method.
@@ -261,7 +282,7 @@ namespace DupeNukem.Internal
         public override async Task<object?> InvokeAsync(JToken?[] args)
         {
             var cas = args.
-                Select((arg, index) => this.ToObject(arg, this.parameterTypes[index])).
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
                 ToArray();
             var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
                 ConfigureAwait(false);

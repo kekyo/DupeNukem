@@ -11,7 +11,9 @@
 
 using DupeNukem.Internal;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -69,24 +71,51 @@ namespace DupeNukem
 
     public sealed class Messenger : IDisposable
     {
+        private static readonly NamingStrategy defaultNamingStrategy =
+            new CamelCaseNamingStrategy();
+
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
-        private readonly Queue<WeakReference<SuspendingDescriptor>> timeoutQueue = new();
+        private readonly Queue<WeakReference> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
-        private readonly JsonSerializer serializer;
         private volatile int id;
+
+        internal readonly JsonSerializer serializer;
+        internal readonly NamingStrategy memberAccessNamingStrategy;
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public Messenger(TimeSpan? timeoutDuration = default)
+        public static JsonSerializer GetDefaultJsonSerializer()
         {
-            this.serializer = new JsonSerializer
+            var serializer = new JsonSerializer
             {
+                DateFormatHandling = DateFormatHandling.IsoDateFormat,
+                DateParseHandling = DateParseHandling.DateTimeOffset,
+                DateTimeZoneHandling = DateTimeZoneHandling.Local,
+                NullValueHandling = NullValueHandling.Include,
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                ContractResolver = new DefaultContractResolver { NamingStrategy = defaultNamingStrategy, },
 #if DEBUG
                 Formatting = Formatting.Indented,
 #endif
             };
+            serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
+            return serializer;
+        }
+
+        public Messenger(TimeSpan? timeoutDuration = default) :
+            this(GetDefaultJsonSerializer(), defaultNamingStrategy, timeoutDuration)
+        {
+        }
+
+        public Messenger(
+            JsonSerializer serializer,
+            NamingStrategy memberAccessNamingStrategy,
+            TimeSpan? timeoutDuration)
+        {
+            this.serializer = serializer;
+            this.memberAccessNamingStrategy = memberAccessNamingStrategy;
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
 
@@ -96,7 +125,7 @@ namespace DupeNukem
                 this.CancelAllSuspending();
 
                 this.Ready?.Invoke(this, EventArgs.Empty);
-                return Task.CompletedTask;
+                return Utilities.CompletedTask;
             });
         }
 
@@ -124,11 +153,16 @@ namespace DupeNukem
             return new StringBuilder(tr.ReadToEnd());
         }
 
-        internal void RegisterMethod(string name, MethodDescriptor method) =>
-            this.methods.SafeAdd(name, method);
+        internal string RegisterMethod(
+            string name, MethodDescriptor method, bool hasSpecifiedName)
+        {
+            var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            this.methods.SafeAdd(n, method);
+            return n;
+        }
 
-        public void UnregisterMethod(string name) =>
-            this.methods.SafeRemove(name);
+        public void UnregisterMethod(string name, bool hasSpecifiedName) =>
+            this.methods.SafeRemove(this.memberAccessNamingStrategy.GetConvertedName(name, false));
 
         public string[] RegisteredMethods
         {
@@ -150,7 +184,7 @@ namespace DupeNukem
                 while (this.timeoutQueue.Count >= 1)
                 {
                     var wr = this.timeoutQueue.Dequeue();
-                    if (wr.TryGetTarget(out var descriptor))
+                    if (wr.Target is SuspendingDescriptor descriptor)
                     {
                         descriptor.Cancel();
                     }
@@ -166,14 +200,14 @@ namespace DupeNukem
                 while (this.timeoutQueue.Count >= 1)
                 {
                     var wr = this.timeoutQueue.Peek();
-                    if (wr.TryGetTarget(out var descriptor))
+                    if (wr.Target is SuspendingDescriptor descriptor)
                     {
                         var past = now - descriptor.Created;
                         var remains = this.timeoutDuration - past;
                         if (remains > TimeSpan.Zero)
                         {
                             this.timeoutTimer.Change(
-                                remains, Timeout.InfiniteTimeSpan);
+                                remains, Utilities.InfiniteTimeSpan);
                             break;
                         }
 
@@ -205,12 +239,11 @@ namespace DupeNukem
         {
             lock (this.timeoutQueue)
             {
-                this.timeoutQueue.Enqueue(
-                    new WeakReference<SuspendingDescriptor>(descriptor));
+                this.timeoutQueue.Enqueue(new WeakReference(descriptor));
                 if (this.timeoutQueue.Count == 1)
                 {
                     this.timeoutTimer.Change(
-                        this.timeoutDuration, Timeout.InfiniteTimeSpan);
+                        this.timeoutDuration, Utilities.InfiniteTimeSpan);
                 }
             }
 
@@ -296,7 +329,7 @@ namespace DupeNukem
                         if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                         {
                             this.suspendings.SafeRemove(message.Id);
-                            var error = message.Body!.ToObject<ExceptionBody>();
+                            var error = message.Body!.ToObject<ExceptionBody>(this.serializer);
                             try
                             {
                                 throw new JavaScriptException(error.Name, error.Message, error.Detail);
@@ -314,7 +347,7 @@ namespace DupeNukem
                     case MessageTypes.Invoke:
                         try
                         {
-                            var body = message.Body!.ToObject<InvokeBody>();
+                            var body = message.Body!.ToObject<InvokeBody>(this.serializer);
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {

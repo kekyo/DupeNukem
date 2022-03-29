@@ -24,7 +24,7 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 
 General purpose `WebView` attachable independent messaging (RPC like) library.
 
-This library is intended for use with a browser component called `WebView` where asynchronous interoperation is not possible or is limited.
+This library is intended for use with a browser component called `WebView` (Edge2, CefSharp, Android, Celenium and etc) where asynchronous interoperation is not possible or is limited.
 It is also independent of any specific `WebView` implementation, so it can be applied to any `WebView` you use.
 The only requirement is to be able to send and receive strings to and from each other.
 
@@ -189,6 +189,10 @@ It's knowledges for gluing browser components.
 TODO:
 
 ### Android WebView
+
+TODO:
+
+### Celenium WebDriver on .NET
 
 TODO:
 

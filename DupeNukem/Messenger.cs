@@ -136,8 +136,11 @@ namespace DupeNukem
             return new StringBuilder(tr.ReadToEnd());
         }
 
-        internal void RegisterMethod(string name, MethodDescriptor method) =>
+        internal string RegisterMethod(string name, MethodDescriptor method)
+        {
             this.methods.SafeAdd(name, method);
+            return name;
+        }
 
         public void UnregisterMethod(string name) =>
             this.methods.SafeRemove(name);

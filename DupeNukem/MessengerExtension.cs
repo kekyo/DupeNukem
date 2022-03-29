@@ -11,33 +11,34 @@
 
 using DupeNukem.Internal;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DupeNukem
 {
     public static class MessengerExtension
     {
-        public static void RegisterAction(
+        public static string RegisterAction(
             this Messenger messenger, Func<Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
                 new ActionDescriptor(action, messenger.serializer));
-        public static void RegisterAction<T0>(
+        public static string RegisterAction<T0>(
             this Messenger messenger, Func<T0, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
                 new ActionDescriptor<T0>(action, messenger.serializer));
-        public static void RegisterAction<T0, T1>(
+        public static string RegisterAction<T0, T1>(
             this Messenger messenger, Func<T0, T1, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
                 new ActionDescriptor<T0, T1>(action, messenger.serializer));
-        public static void RegisterAction<T0, T1, T2>(
+        public static string RegisterAction<T0, T1, T2>(
             this Messenger messenger, Func<T0, T1, T2, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
                 new ActionDescriptor<T0, T1, T2>(action, messenger.serializer));
-        public static void RegisterAction<T0, T1, T2, T3>(
+        public static string RegisterAction<T0, T1, T2, T3>(
             this Messenger messenger, Func<T0, T1, T2, T3, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
@@ -71,27 +72,27 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static void RegisterFunc<TR>(
+        public static string RegisterFunc<TR>(
             this Messenger messenger, Func<Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
                 new FuncDescriptor<TR>(func, messenger.serializer));
-        public static void RegisterFunc<TR, T0>(
+        public static string RegisterFunc<TR, T0>(
             this Messenger messenger, Func<T0, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
                 new FuncDescriptor<TR, T0>(func, messenger.serializer));
-        public static void RegisterFunc<TR, T0, T1>(
+        public static string RegisterFunc<TR, T0, T1>(
             this Messenger messenger, Func<T0, T1, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
                 new FuncDescriptor<TR, T0, T1>(func, messenger.serializer));
-        public static void RegisterFunc<TR, T0, T1, T2>(
+        public static string RegisterFunc<TR, T0, T1, T2>(
             this Messenger messenger, Func<T0, T1, T2, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
                 new FuncDescriptor<TR, T0, T1, T2>(func, messenger.serializer));
-        public static void RegisterFunc<TR, T0, T1, T2, T3>(
+        public static string RegisterFunc<TR, T0, T1, T2, T3>(
             this Messenger messenger, Func<T0, T1, T2, T3, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
@@ -125,12 +126,12 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static void RegisterDynamicMethod(
+        public static string RegisterDynamicMethod(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
                 new DynamicMethodDescriptor(method, messenger.serializer));
-        public static void RegisterDynamicMethod<TR>(
+        public static string RegisterDynamicMethod<TR>(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
@@ -155,21 +156,17 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static void RegisterObject(
-            this Messenger messenger, string? scopeName, object target)
-        {
-            foreach (var entry in Utilities.EnumerateTargetMethods(target))
-            {
-                var methodName = scopeName != null ?
+        public static string[] RegisterObject(
+            this Messenger messenger, string? scopeName, object target) =>
+            Utilities.EnumerateTargetMethods(target).
+            Select(entry => messenger.RegisterMethod(
+                scopeName != null ?
                     $"{scopeName}.{entry.MethodName}" :
-                    entry.MethodName;
-                messenger.RegisterMethod(
-                    methodName,
-                    new ObjectMethodDescriptor(target, entry.Method, messenger.serializer));
-            }
-        }
+                    entry.MethodName,
+                new ObjectMethodDescriptor(target, entry.Method, messenger.serializer))).
+            ToArray();
 
-        public static void RegisterObject(
+        public static string[] RegisterObject(
             this Messenger messenger, object target, bool isFullName = true) =>
             RegisterObject(
                 messenger,

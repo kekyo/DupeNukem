@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // messaging library between .NET and JavaScript.
@@ -111,7 +111,7 @@ class __DupeNukem_Messenger__ {
                             this.injectProxy__(message.body);
                             break;
                         case "delete":
-                            this.removeProxy__(message.body);
+                            this.deleteProxy__(message.body);
                             break;
                     }
                     break;

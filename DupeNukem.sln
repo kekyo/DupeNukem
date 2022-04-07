@@ -19,6 +19,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DupeNukem.WebView2", "sampl
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{3330107E-71B7-4D4D-A636-88820B377D1C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DupeNukem.CefSharp", "samples\DupeNukem.CefSharp\DupeNukem.CefSharp.csproj", "{7D84BB86-27B2-4BFE-A78F-4039ECB33158}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,12 +35,17 @@ Global
 		{2DCF616D-6A7F-4811-BC8E-F573D56D0EC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2DCF616D-6A7F-4811-BC8E-F573D56D0EC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2DCF616D-6A7F-4811-BC8E-F573D56D0EC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D84BB86-27B2-4BFE-A78F-4039ECB33158}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D84BB86-27B2-4BFE-A78F-4039ECB33158}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D84BB86-27B2-4BFE-A78F-4039ECB33158}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D84BB86-27B2-4BFE-A78F-4039ECB33158}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2DCF616D-6A7F-4811-BC8E-F573D56D0EC0} = {3330107E-71B7-4D4D-A636-88820B377D1C}
+		{7D84BB86-27B2-4BFE-A78F-4039ECB33158} = {3330107E-71B7-4D4D-A636-88820B377D1C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6434B77B-9D8E-4F16-9C07-2E4E5DD1E6BE}

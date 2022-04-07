@@ -9,6 +9,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using CefSharp;
+using CefSharp.Wpf;
 using Epoxy;
 using System;
 using System.Diagnostics;
@@ -22,10 +24,10 @@ namespace DupeNukem.ViewModels
     {
         public Command Loaded { get; }
 
-        public Uri? Url { get; private set; }
+        public string? Url { get; private set; }
 
-        public Pile<Microsoft.Web.WebView2.Wpf.WebView2> WebView2Pile { get; } =
-            PileFactory.Create<Microsoft.Web.WebView2.Wpf.WebView2>();
+        public Pile<ChromiumWebBrowser> CefSharpPile { get; } =
+            PileFactory.Create<ChromiumWebBrowser>();
 
         public MainWindowViewModel()
         {
@@ -37,27 +39,34 @@ namespace DupeNukem.ViewModels
             // MainWindow.Loaded:
             this.Loaded = CommandFactory.Create<EventArgs>(async _ =>
             {
-                await this.WebView2Pile.RentAsync(async webView2 =>
+                await this.CefSharpPile.RentAsync(cefSharp =>
                 {
                     // Startup sequence.
-                    // Bound both WebView2 and DupeNukem Messenger.
-
-                    // Initialize WebView2.
-                    await webView2.EnsureCoreWebView2Async();
+                    // Bound between CefSharp and DupeNukem Messenger.
 
                     // Step 2: Hook up .NET --> JavaScript message handler.
                     messenger.SendRequest += (s, e) =>
-                        webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
+                        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+                            $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');");
 
                     // Step 3: Attached JavaScript --> .NET message handler.
-                    webView2.CoreWebView2.WebMessageReceived += (s, e) =>
-                        messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+                    cefSharp.JavascriptMessageReceived += (s, e) =>
+                        messenger.ReceivedRequest(e.Message.ToString());
 
                     // Step 4: Injected Messenger script.
                     var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
-                    await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
-                        script.ToString());
+                    cefSharp.FrameLoadEnd += (s, e) =>
+                    {
+                        if (e.Frame.IsMain)
+                        {
+                            cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+                                script.ToString());
+                        }
+                    };
+#if DEBUG
+                    cefSharp.ShowDevTools();
+#endif
 
                     // =========================================
                     // Register an object:
@@ -98,9 +107,11 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(
                         "array",
                         async keys => { await Task.Delay(100); return keys; });
+
+                    return default;
                 });
 
-                this.Url = new Uri("https://www.google.com/");
+                this.Url = "https://www.google.com/";
             });
         }
 

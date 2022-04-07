@@ -213,7 +213,27 @@ It's knowledges for gluing browser components.
 
 ### CefSharp
 
-TODO:
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+        $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');");
+
+// Step 3: Attached JavaScript --> .NET message handler.
+cefSharp.JavascriptMessageReceived += (s, e) =>
+    messenger.ReceivedRequest(e.Message.ToString());
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+cefSharp.FrameLoadEnd += (s, e) =>
+{
+    if (e.Frame.IsMain)
+    {
+        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+            script.ToString());
+    }
+};
+```
 
 ### Android WebView
 

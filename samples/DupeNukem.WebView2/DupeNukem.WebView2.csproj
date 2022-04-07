@@ -4,10 +4,12 @@
     <OutputType>WinExe</OutputType>
     <TargetFrameworks>net48;net6.0-windows</TargetFrameworks>
     <Nullable>enable</Nullable>
+    <RootNamespace>DupeNukem</RootNamespace>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
     <PackageReference Include="Epoxy.Wpf" Version="1.3.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1108.44" />
   </ItemGroup>

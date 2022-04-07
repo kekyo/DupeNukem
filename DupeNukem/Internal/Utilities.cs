@@ -316,7 +316,8 @@ namespace DupeNukem.Internal
             public void OnCompleted(Action continuation)
             {
                 if (Interlocked.CompareExchange(
-                    ref this.context, null, this.context) is { } context)
+                    ref this.context, null, this.context) is { } context &&
+                    !object.ReferenceEquals(context, SynchronizationContext.Current))
                 {
                     context.Post(c => ((Action)c!)(), continuation);
                 }

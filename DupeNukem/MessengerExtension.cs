@@ -244,5 +244,10 @@ namespace DupeNukem
         public static Task<TR> InvokeClientFunctionAsync<TR>(
             this Messenger messenger, string functionName, params object[] args) =>
             messenger.InvokeClientFunctionAsync<TR>(default, functionName, args);
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public static string ToJavaScript(this SendRequestEventArgs e) =>
+            $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');";
     }
 }

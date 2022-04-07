@@ -213,7 +213,27 @@ It's knowledges for gluing browser components.
 
 ### CefSharp
 
-TODO:
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+        e.ToJavaScript());
+
+// Step 3: Attached JavaScript --> .NET message handler.
+cefSharp.JavascriptMessageReceived += (s, e) =>
+    messenger.ReceivedRequest(e.Message.ToString());
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+cefSharp.FrameLoadEnd += (s, e) =>
+{
+    if (e.Frame.IsMain)
+    {
+        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+            script.ToString());
+    }
+};
+```
 
 ### Android WebView
 
@@ -233,6 +253,8 @@ Apache-v2.
 
 ## History
 
+* 0.7.0:
+  * Supported CefSharp.
 * 0.6.0:
   * Supported proxy object on JavaScript side.
   * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)

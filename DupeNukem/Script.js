@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////
+﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // messaging library between .NET and JavaScript.
@@ -15,6 +15,7 @@ class __DupeNukem_Messenger__ {
     constructor(hookup) {
         this.suspendings__ = new Map();
         this.id__ = 0;
+        this.debugLog__ = false;
 
         if (hookup != undefined) {
             this.sendToHostMessage__ = hookup();
@@ -30,12 +31,22 @@ class __DupeNukem_Messenger__ {
                     "message", e => { this.arrivedHostMesssage__(e.data); });
                 console.info("DupeNukem: Microsoft WebView2 detected.");
             }
+            else if (window?.CefSharp?.PostMessage != undefined) {
+                this.sendToHostMessage__ = window.CefSharp.PostMessage;
+                console.info("DupeNukem: CefSharp detected.");
+            }
             else {
                 this.sendToHostMessage__ = function (message) {
                     console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
                 };
                 console.warn("DupeNukem: couldn't detect host browser type.");
             }
+        }
+    }
+
+    log__(message) {
+        if (this.debugLog__) {
+            console.log(message);
         }
     }
 
@@ -49,6 +60,7 @@ class __DupeNukem_Messenger__ {
             const message = JSON.parse(jsonString);
             switch (message.type) {
                 case "succeeded":
+                    this.log__("DupeNukem: succeeded: " + message.id);
                     const successorDescriptor = this.suspendings__.get(message.id);
                     if (successorDescriptor != undefined) {
                         this.suspendings__.delete(message.id);
@@ -59,6 +71,7 @@ class __DupeNukem_Messenger__ {
                     }
                     break;
                 case "failed":
+                    this.log__("DupeNukem: failed: " + message.id);
                     const failureDescriptor = this.suspendings__.get(message.id);
                     if (failureDescriptor != undefined) {
                         this.suspendings__.delete(message.id);
@@ -73,6 +86,7 @@ class __DupeNukem_Messenger__ {
                     break;
                 case "invoke":
                     try {
+                        this.log__("DupeNukem: invoke: " + message.body.name + "(...)");
                         const ne = message.body.name.split(".");
                         const ti = ne.
                             slice(0, ne.length - 1).
@@ -106,6 +120,7 @@ class __DupeNukem_Messenger__ {
                     }
                     break;
                 case "control":
+                    this.log__("DupeNukem: control: " + message.id + ": " + message.body);
                     switch (message.id) {
                         case "inject":
                             this.injectProxy__(message.body);

@@ -77,23 +77,23 @@ Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packag
 
 ----
 
-## Setup infrastructure
+## Setup sequence
 
-Setup process is gluing between `WebView` and DupeNukem `Messenger`.
-Another browser components maybe same as setup process. See `Another browsers` below.
+Setup sequence is gluing between `WebView` and DupeNukem `Messenger`.
+DupeNukem uses only "strings" to exchange messages.
+In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set up to mutually exchange message strings.
+
+(Another browser components maybe same as setup process. See `Another browsers` below.)
 
 ```csharp
 // Startup sequence.
-// Bound both WebView2 and DupeNukem Messenger.
+// Bound between WebView2 and DupeNukem Messenger.
 
 // Step 1: Construct DupeNukem Messenger.
 // Default timeout duration is 30sec.
 var messenger = new Messenger();
 
 //////////////////////////////////////////
-
-// Initialize WebView2.
-await webView2.EnsureCoreWebView2Async();
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
@@ -135,12 +135,18 @@ public class Calculator
 
 ////////////////////////////////////////
 
-// name: `DupeNukem.ViewModels.Calculator.Add`, `DupeNukem.ViewModels.Calculator.Sub`
+// JS: `const result = await dupeNukem.viewModels.calculator.add(1, 2);`
+// JS: `const result = await dupeNukem.viewModels.calculator.Sub(1, 2);`
 var calculator = new Calculator();
 messenger.RegisterObject(calculator);
 
-// name: `calc.Add`, `calc.Sub`
+// JS: `const result = await calc.add(1, 2);`
+// JS: `const result = await calc.Sub(1, 2);`
 messenger.RegisterObject("calc", calculator);
+
+// JS: `const result = await add(1, 2);`    // (Put on `window.add`)
+// JS: `const result = await Sub(1, 2);`    // (Put on `window.Sub`)
+messenger.RegisterObject("", calculator);
 ```
 
 Register methods around .NET side:
@@ -148,14 +154,17 @@ Register methods around .NET side:
 * Strict declarative each methods.
 
 ```csharp
-// name: `DupeNukem.ViewModels.MainWindowViewModel.Add`
+// JS: `const result = await dupeNukem.viewModels.mainWindowViewModel.add`
 messenger.RegisterFunc<int, int, int>(this.Add);
-// name: `DupeNukem.ViewModels.MainWindowViewModel.Sub`
+// JS: `const result = await dupeNukem.viewModels.mainWindowViewModel.Sub`
 messenger.RegisterFunc<int, int, int>(this.Sub);
 
 // Or, register directly delegate with method name.
+
+// JS: `const result = await dotnet_add(1, 2);`
 messenger.RegisterFunc<int, int, int>(
     "dotnet_add", (a, b) => Task.FromResult(a + b));
+// JS: `const result = await dotnet_sub(1, 2);`
 messenger.RegisterFunc<int, int, int>(
     "dotnet_sub", (a, b) => Task.FromResult(a - b));
 ```
@@ -164,10 +173,13 @@ Declare functions around JavaScript side:
 
 ```javascript
 // Global functions:
+
+// .NET: `var result = await messenger.InvokeJavaScriptFunction("js_add", 1, 2);`
 async function js_add(a, b) {
     return a + b;
 }
 
+// .NET: `var result = await messenger.InvokeJavaScriptFunction("js_sub", 1, 2);`
 async function js_sub(a, b) {
     return a - b;
 }
@@ -184,10 +196,14 @@ class Foo
     }
 }
 
-// messenger.InvokeJavaScriptFunction("foo.add", 1, 2);
-// messenger.InvokeJavaScriptFunction("foo.sub", 1, 2);
+// .NET: `var result = await messenger.InvokeJavaScriptFunction("foo.add", 1, 2);`
+// .NET: `var result = await messenger.InvokeJavaScriptFunction("foo.sub", 1, 2);`
 var foo = new Foo();
 ```
+
+NOTE: We have to put JavaScript object instance with `var` keyword.
+DupeNukem will fail invoking when use `const` or `let` keyword.
+It is limitation for JavaScript specification.
 
 ----
 

@@ -101,9 +101,7 @@ await webView2.EnsureCoreWebView2Async();
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
-    // WPF requires switching to UI thread when manipulate UI elements.
-    dispatcher.BeginInvoke(() =>
-        webView2.CoreWebView2.PostWebMessageAsString(e.Message));
+    webView2.CoreWebView2.PostWebMessageAsString(e.Message);
 
 // Step 3: Hook up JavaScript --> .NET message handler.
 webView2.CoreWebView2.WebMessageReceived += (s, e) =>
@@ -206,6 +204,8 @@ Apache-v2.
 
 ## History
 
+* 0.6.0:
+  * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)
 * 0.5.0:
   * Supported customize json format with `JsonSerializer` and made defaults with camel-casing serialization.
   * Made defaults for all symbol naming to camel case.

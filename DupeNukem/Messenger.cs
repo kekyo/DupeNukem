@@ -74,6 +74,7 @@ namespace DupeNukem
         private static readonly NamingStrategy defaultNamingStrategy =
             new CamelCaseNamingStrategy();
 
+        private readonly SynchronizationContext? synchContext = SynchronizationContext.Current;
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
         private readonly Queue<WeakReference> timeoutQueue = new();
@@ -221,10 +222,12 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        private void SendMessageToClient(string jsonString)
+        private async void SendMessageToClient(string jsonString)
         {
             if (this.SendRequest is { } sendRequest)
             {
+                await this.synchContext.Bind();
+
                 sendRequest(this, new SendRequestEventArgs(jsonString));
             }
             else
@@ -351,6 +354,8 @@ namespace DupeNukem
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {
+                                await this.synchContext.Bind();
+
                                 var result = await method.InvokeAsync(body.Args).
                                     ConfigureAwait(false);
 

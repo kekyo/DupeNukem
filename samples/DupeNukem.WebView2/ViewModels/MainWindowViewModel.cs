@@ -48,11 +48,8 @@ namespace DupeNukem.ViewModels
                     await webView2.EnsureCoreWebView2Async();
 
                     // Step 2: Hook up .NET --> JavaScript message handler.
-                    messenger.SendRequest += async (s, e) =>
-                    {
-                        await UIThread.Bind();   // Marshaling into UI thread (by Epoxy)
+                    messenger.SendRequest += (s, e) =>
                         webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
-                    };
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     webView2.CoreWebView2.WebMessageReceived += (s, e) =>

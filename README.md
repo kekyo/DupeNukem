@@ -126,7 +126,7 @@ public class Calculator
         // ...
     }
 
-    [JavaScriptTarget("Sub")]   // Strictly naming
+    [JavaScriptTarget("Subtract")]   // Strictly naming
     public Task<int> __Sub__123(int a, int b)
     {
         // ...
@@ -136,16 +136,16 @@ public class Calculator
 ////////////////////////////////////////
 
 // JS: `const result = await dupeNukem.viewModels.calculator.add(1, 2);`
-// JS: `const result = await dupeNukem.viewModels.calculator.Sub(1, 2);`
+// JS: `const result = await dupeNukem.viewModels.calculator.Subtract(1, 2);`
 var calculator = new Calculator();
 messenger.RegisterObject(calculator);
 
 // JS: `const result = await calc.add(1, 2);`
-// JS: `const result = await calc.Sub(1, 2);`
+// JS: `const result = await calc.Subtract(1, 2);`
 messenger.RegisterObject("calc", calculator);
 
-// JS: `const result = await add(1, 2);`    // (Put on `window.add`)
-// JS: `const result = await Sub(1, 2);`    // (Put on `window.Sub`)
+// JS: `const result = await add(1, 2);`         // (Put on `window.add`)
+// JS: `const result = await Subtract(1, 2);`    // (Put on `window.Subtract`)
 messenger.RegisterObject("", calculator);
 ```
 
@@ -156,8 +156,8 @@ Register methods around .NET side:
 ```csharp
 // JS: `const result = await dupeNukem.viewModels.mainWindowViewModel.add`
 messenger.RegisterFunc<int, int, int>(this.Add);
-// JS: `const result = await dupeNukem.viewModels.mainWindowViewModel.Sub`
-messenger.RegisterFunc<int, int, int>(this.Sub);
+// JS: `const result = await dupeNukem.viewModels.mainWindowViewModel.Subtract`
+messenger.RegisterFunc<int, int, int>(this.__Sub__123);
 
 // Or, register directly delegate with method name.
 
@@ -174,12 +174,12 @@ Declare functions around JavaScript side:
 ```javascript
 // Global functions:
 
-// .NET: `var result = await messenger.InvokeJavaScriptFunction("js_add", 1, 2);`
+// .NET: `var result = await messenger.InvokeClientFunctionAsync("js_add", 1, 2);`
 async function js_add(a, b) {
     return a + b;
 }
 
-// .NET: `var result = await messenger.InvokeJavaScriptFunction("js_sub", 1, 2);`
+// .NET: `var result = await messenger.InvokeClientFunctionAsync("js_sub", 1, 2);`
 async function js_sub(a, b) {
     return a - b;
 }
@@ -196,8 +196,8 @@ class Foo
     }
 }
 
-// .NET: `var result = await messenger.InvokeJavaScriptFunction("foo.add", 1, 2);`
-// .NET: `var result = await messenger.InvokeJavaScriptFunction("foo.sub", 1, 2);`
+// .NET: `var result = await messenger.InvokeClientFunctionAsync("foo.add", 1, 2);`
+// .NET: `var result = await messenger.InvokeClientFunctionAsync("foo.sub", 1, 2);`
 var foo = new Foo();
 ```
 

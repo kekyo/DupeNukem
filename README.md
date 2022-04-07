@@ -73,7 +73,10 @@ const result_Add = await dupeNukem.viewModels.calculator.add(1, 2);
 const result_add = await dotnet_add(1, 2);
 ```
 
-Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
+Here is an example using:
+
+* [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
+* [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) / [`CefSharp.Wpf.NETCore`](https://www.nuget.org/packages/CefSharp.Wpf.NETCore) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
 
 ----
 

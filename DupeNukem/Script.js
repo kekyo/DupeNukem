@@ -9,6 +9,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+// Core dispatcher for JavaScript side.
 class DupeNukem_Messenger__ {
 
     constructor(hookup) {
@@ -122,13 +123,27 @@ class DupeNukem_Messenger__ {
             }
         });
     }
-};
+}
 
+//////////////////////////////////////////////////
+
+// Often you have to give a custom hook up function `dupeNukem_Messenger_hookup`
+// BEFORE this script when you need to another browser support
+// at initializing process on `messenger.GetInjectionScript()`.
+//
+// ```csharp
+// var script = messenger.GetInjectionScript();
+// script.Insert(0, "function dupeNukem_Messenger_hookup() { ... }");
+//
+// webView.InjectScript(script.ToString());
+// ```
 const dupeNukem_Messenger__ =
     new DupeNukem_Messenger__(window.dupeNukem_Messenger_hookup);
 
 //////////////////////////////////////////////////
 
+// Invoke to .NET method.
+// invokeHostMethod(methodName, ...) : Promise
 function invokeHostMethod(methodName) {
     const args = new Array(arguments.length - 1);
     for (let i = 0; i < args.length; i++) {
@@ -137,6 +152,7 @@ function invokeHostMethod(methodName) {
     return dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
 }
 
+// Final initializer.
 invokeHostMethod("dupeNukem_Messenger_ready__");
 
 ///////////////////////////////////////////////////////////////////////////////

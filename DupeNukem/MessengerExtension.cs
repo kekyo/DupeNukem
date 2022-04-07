@@ -13,7 +13,6 @@ using DupeNukem.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace DupeNukem
@@ -202,20 +201,25 @@ namespace DupeNukem
             this Messenger messenger, string? scopeName, object target) =>
             EnumerateRegisterObjectMethods(messenger, scopeName, target, false).
             Select(entry => messenger.RegisterMethod(
-                entry.MethodName, new ObjectMethodDescriptor(target, entry.Method, messenger.serializer), true)).
+                entry.MethodName,
+                new ObjectMethodDescriptor(target, entry.Method, messenger.serializer),
+                true)).
             ToArray();
 
         public static string[] RegisterObject(
             this Messenger messenger, object target, bool isFullName = true) =>
             EnumerateRegisterObjectMethods(messenger, null, target, isFullName).
             Select(entry => messenger.RegisterMethod(
-                entry.MethodName, new ObjectMethodDescriptor(target, entry.Method, messenger.serializer), true)).
+                entry.MethodName,
+                new ObjectMethodDescriptor(target, entry.Method, messenger.serializer),
+                true)).
             ToArray();
 
         public static void UnregisterObject(
             this Messenger messenger, string? scopeName, object target)
         {
-            foreach (var entry in EnumerateRegisterObjectMethods(messenger, scopeName, target, false))
+            foreach (var entry in
+                EnumerateRegisterObjectMethods(messenger, scopeName, target, false))
             {
                 messenger.UnregisterMethod(entry.MethodName, true);
             }
@@ -224,7 +228,8 @@ namespace DupeNukem
         public static void UnregisterObject(
             this Messenger messenger, object target, bool isFullName = true)
         {
-            foreach (var entry in EnumerateRegisterObjectMethods(messenger, null, target, isFullName))
+            foreach (var entry in
+                EnumerateRegisterObjectMethods(messenger, null, target, isFullName))
             {
                 messenger.UnregisterMethod(entry.MethodName, true);
             }

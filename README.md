@@ -57,24 +57,20 @@ Invoke JavaScript functions from .NET side:
 
 ```csharp
 var result_add = await messenger.InvokeClientFunctionAsync<int>(
-    "js_add",
-    1, 2);
+    "js_add", 1, 2);
+
 var result_sub = await messenger.InvokeClientFunctionAsync<int>(
-    "js_sub",
-    1, 2);
+    "js_sub", 1, 2);
 ```
 
-Invoke .NET methods from JavaScript side:
+Invoke .NET methods from JavaScript side (using proxy objects):
 
 ```javascript
 // `Add` method
-const result_Add = await invokeHostMethod(
-    "DupeNukem.ViewModels.Calculator.Add",
-    1, 2);
+const result_Add = await dupeNukem.viewModels.calculator.add(1, 2);
+
 // `dotnet_add` delegate
-const result_add = await invokeHostMethod(
-    "dotnet_add",
-    1, 2);
+const result_add = await dotnet_add(1, 2);
 ```
 
 Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
@@ -167,6 +163,7 @@ messenger.RegisterFunc<int, int, int>(
 Declare functions around JavaScript side:
 
 ```javascript
+// Global functions:
 async function js_add(a, b) {
     return a + b;
 }
@@ -174,6 +171,22 @@ async function js_add(a, b) {
 async function js_sub(a, b) {
     return a - b;
 }
+
+// Member functions:
+class Foo
+{
+    async add(a, b) {
+        return a + b;
+    }
+
+    async sub(a, b) {
+        return a - b;
+    }
+}
+
+// messenger.InvokeJavaScriptFunction("foo.add", 1, 2);
+// messenger.InvokeJavaScriptFunction("foo.sub", 1, 2);
+var foo = new Foo();
 ```
 
 ----
@@ -205,6 +218,7 @@ Apache-v2.
 ## History
 
 * 0.6.0:
+  * Supported proxy object on JavaScript side.
   * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)
 * 0.5.0:
   * Supported customize json format with `JsonSerializer` and made defaults with camel-casing serialization.

@@ -191,6 +191,10 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  } catch (e) {");
             script.AppendLine("    console.log('PASS: Unknown method invoking [calc.mult]');");
             script.AppendLine("  }");
+            script.AppendLine("  const result_fullName_proxy_calc_add = await dupeNukem.viewModels.calculator.add(1, 2);");
+            script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
+            script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
+            script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
             script.AppendLine("})();");
             // ----
         }

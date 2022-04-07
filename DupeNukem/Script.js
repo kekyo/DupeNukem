@@ -10,14 +10,14 @@
 ////////////////////////////////////////////////////////////////////////////
 
 // Core dispatcher for JavaScript side.
-class DupeNukem_Messenger__ {
+class __DupeNukem_Messenger__ {
 
     constructor(hookup) {
         this.suspendings__ = new Map();
         this.id__ = 0;
 
         if (hookup != undefined) {
-            hookup();
+            this.sendToHostMessage__ = hookup();
         }
         else {
             if (window?.external?.notify != undefined) {
@@ -31,7 +31,9 @@ class DupeNukem_Messenger__ {
                 console.info("DupeNukem: Microsoft WebView2 detected.");
             }
             else {
-                this.sendToHostMessage__ = function (_) { };
+                this.sendToHostMessage__ = function (message) {
+                    console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
+                };
                 console.warn("DupeNukem: couldn't detect host browser type.");
             }
         }
@@ -103,6 +105,16 @@ class DupeNukem_Messenger__ {
                         this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), });
                     }
                     break;
+                case "control":
+                    switch (message.id) {
+                        case "inject":
+                            this.injectProxy__(message.body);
+                            break;
+                        case "delete":
+                            this.removeProxy__(message.body);
+                            break;
+                    }
+                    break;
             }
         }
         catch (e) {
@@ -123,6 +135,67 @@ class DupeNukem_Messenger__ {
             }
         });
     }
+
+    getScopedElement__(names) {
+        let current = window;
+        for (const name of names.slice(0, names.length - 1)) {
+            let next = current[name];
+            if (next == undefined) {
+                next = new Object();
+                Object.defineProperty(current, name, {
+                    value: next,
+                    writable: false,
+                    enumerable: true,
+                    configurable: true,
+                });
+            }
+            current = next;
+        }
+        return current;
+    }
+
+    injectProxy__(name) {
+        const ne = name.split(".");
+        const fn = ne[ne.length - 1];
+
+        let current = window;
+        for (const name of ne.slice(0, ne.length - 1)) {
+            let next = current[name];
+            if (next == undefined) {
+                next = new Object();
+                Object.defineProperty(current, name, {
+                    value: next,
+                    writable: false,
+                    enumerable: true,
+                    configurable: true,
+                });
+            }
+            current = next;
+        }
+
+        Object.defineProperty(current, fn, {
+            value: invokeHostMethod.bind(current, fn),
+            writable: false,
+            enumerable: true,
+            configurable: true,
+        });
+    }
+
+    deleteProxy__(name) {
+        const ne = name.split(".");
+        const fn = ne[ne.length - 1];
+
+        let current = window;
+        for (const name of ne.slice(0, ne.length - 1)) {
+            let next = current[name];
+            if (next == undefined) {
+                return;
+            }
+            current = next;
+        }
+
+        delete current[fn];
+    }
 }
 
 //////////////////////////////////////////////////
@@ -133,12 +206,17 @@ class DupeNukem_Messenger__ {
 //
 // ```csharp
 // var script = messenger.GetInjectionScript();
-// script.Insert(0, "function dupeNukem_Messenger_hookup() { ... }");
+// script.Insert(0, "function dupeNukem_Messenger_hookup() { return function (message) => ... }");
 //
 // webView.InjectScript(script.ToString());
 // ```
-const dupeNukem_Messenger__ =
-    new DupeNukem_Messenger__(window.dupeNukem_Messenger_hookup);
+
+Object.defineProperty(window, "__dupeNukem_Messenger__", {
+    value: new __DupeNukem_Messenger__(window.dupeNukem_Messenger_hookup),
+    writable: false,
+    enumerable: true,
+    configurable: false,
+});
 
 //////////////////////////////////////////////////
 
@@ -149,11 +227,12 @@ function invokeHostMethod(methodName) {
     for (let i = 0; i < args.length; i++) {
         args[i] = arguments[i + 1];
     }
-    return dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
+    return __dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
 }
 
 // Final initializer.
-invokeHostMethod("dupeNukem_Messenger_ready__");
+__dupeNukem_Messenger__.sendToHostMessage__(
+    JSON.stringify({ id: "ready", type: "control", body: null, }));
 
 ///////////////////////////////////////////////////////////////////////////////
 

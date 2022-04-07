@@ -119,15 +119,6 @@ namespace DupeNukem
             this.memberAccessNamingStrategy = memberAccessNamingStrategy;
             this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
             this.timeoutTimer = new Timer(this.ReachTimeout);
-
-            this.RegisterAction("dupeNukem_Messenger_ready__", () =>
-            {
-                // Exhausted page content, maybe all suspending tasks are zombies.
-                this.CancelAllSuspending();
-
-                this.Ready?.Invoke(this, EventArgs.Empty);
-                return Utilities.CompletedTask;
-            });
         }
 
         public void Dispose()
@@ -154,16 +145,32 @@ namespace DupeNukem
             return new StringBuilder(tr.ReadToEnd());
         }
 
+        private void InjectFunctionProxy(string name, bool isInject)
+        {
+            var request = new Message(
+                isInject ? "inject" : "delete",
+                MessageTypes.Control,
+                JToken.FromObject(name, this.serializer));
+            var tw = new StringWriter();
+            this.serializer.Serialize(tw, request);
+            this.SendMessageToClient(tw.ToString());
+        }
+
         internal string RegisterMethod(
             string name, MethodDescriptor method, bool hasSpecifiedName)
         {
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            this.InjectFunctionProxy(n, true);
             this.methods.SafeAdd(n, method);
             return n;
         }
 
-        internal void UnregisterMethod(string name, bool hasSpecifiedName) =>
-            this.methods.SafeRemove(this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName));
+        internal void UnregisterMethod(string name, bool hasSpecifiedName)
+        {
+            var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            this.InjectFunctionProxy(n, false);
+            this.methods.SafeRemove(n);
+        }
 
         public string[] RegisteredMethods
         {
@@ -317,6 +324,23 @@ namespace DupeNukem
 
                 switch (message.Type)
                 {
+                    case MessageTypes.Control:
+                        if (message.Id == "ready")
+                        {
+                            // Exhausted page content, maybe all suspending tasks are zombies.
+                            this.CancelAllSuspending();
+
+                            // Inject JavaScript proxies.
+                            foreach (var kv in this.methods)
+                            {
+                                this.InjectFunctionProxy(kv.Key, true);
+                            }
+
+                            // Invoke ready event.
+                            this.Ready?.Invoke(this, EventArgs.Empty);
+                        }
+                        break;
+
                     case MessageTypes.Succeeded:
                         if (this.suspendings.SafeTryGetValue(message.Id, out var successorDescriptor))
                         {
@@ -328,6 +352,7 @@ namespace DupeNukem
                             this.ErrorDetected?.Invoke(this, new SpriousMessageEventArgs(jsonString));
                         }
                         break;
+
                     case MessageTypes.Failed:
                         if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                         {
@@ -347,6 +372,7 @@ namespace DupeNukem
                             this.ErrorDetected?.Invoke(this, new SpriousMessageEventArgs(jsonString));
                         }
                         break;
+
                     case MessageTypes.Invoke:
                         try
                         {

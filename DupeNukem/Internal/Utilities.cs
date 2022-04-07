@@ -223,6 +223,49 @@ namespace DupeNukem.Internal
             Task.CompletedTask;
 #endif
 
+#if DEBUG
+        public static async Task WhenAll(IEnumerable<Task> tasks)
+        {
+            foreach (var task in tasks)
+            {
+                await task.ConfigureAwait(false);
+            }
+        }
+#else
+        public static Task WhenAll(IEnumerable<Task> tasks) =>
+#if NET35 || NET40
+            TaskEx.WhenAll(tasks);
+#else
+            Task.WhenAll(tasks);
+#endif
+#endif
+
+#if DEBUG
+        public static async Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks)
+        {
+            var results = new List<T>();
+            foreach (var task in tasks)
+            {
+                results.Add(await task.ConfigureAwait(false));
+            }
+            return results.ToArray();
+        }
+#else
+        public static Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks) =>
+#if NET35 || NET40
+            TaskEx.WhenAll(tasks);
+#else
+            Task.WhenAll(tasks);
+#endif
+#endif
+
+        public static Task Delay(int msec) =>
+#if NET35 || NET40
+            TaskEx.Delay(msec);
+#else
+            Task.Delay(msec);
+#endif
+
         public static bool IsNullOrWhiteSpace(string? str) =>
 #if NET35
             string.IsNullOrEmpty(str) || str!.Trim().Length == 0;

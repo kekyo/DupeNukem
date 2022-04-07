@@ -19,6 +19,7 @@ namespace DupeNukem.Internal
     [JsonConverter(typeof(StringEnumConverter), typeof(CamelCaseNamingStrategy))]
     internal enum MessageTypes
     {
+        Control,
         Succeeded,
         Failed,
         Invoke,

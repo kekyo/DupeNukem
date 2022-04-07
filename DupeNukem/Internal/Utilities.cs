@@ -12,8 +12,10 @@
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -221,6 +223,49 @@ namespace DupeNukem.Internal
             Task.CompletedTask;
 #endif
 
+#if DEBUG
+        public static async Task WhenAll(IEnumerable<Task> tasks)
+        {
+            foreach (var task in tasks)
+            {
+                await task.ConfigureAwait(false);
+            }
+        }
+#else
+        public static Task WhenAll(IEnumerable<Task> tasks) =>
+#if NET35 || NET40
+            TaskEx.WhenAll(tasks);
+#else
+            Task.WhenAll(tasks);
+#endif
+#endif
+
+#if DEBUG
+        public static async Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks)
+        {
+            var results = new List<T>();
+            foreach (var task in tasks)
+            {
+                results.Add(await task.ConfigureAwait(false));
+            }
+            return results.ToArray();
+        }
+#else
+        public static Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks) =>
+#if NET35 || NET40
+            TaskEx.WhenAll(tasks);
+#else
+            Task.WhenAll(tasks);
+#endif
+#endif
+
+        public static Task Delay(int msec) =>
+#if NET35 || NET40
+            TaskEx.Delay(msec);
+#else
+            Task.Delay(msec);
+#endif
+
         public static bool IsNullOrWhiteSpace(string? str) =>
 #if NET35
             string.IsNullOrEmpty(str) || str!.Trim().Length == 0;
@@ -241,5 +286,48 @@ namespace DupeNukem.Internal
 #else
             Timeout.InfiniteTimeSpan;
 #endif
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public static BindAwaitable Bind(this SynchronizationContext? context) =>
+            new BindAwaitable(context);
+
+        public struct BindAwaitable
+        {
+            private readonly SynchronizationContext? context;
+
+            public BindAwaitable(SynchronizationContext? context) =>
+                this.context = context;
+
+            public BindAwaiter GetAwaiter() =>
+                new BindAwaiter(this.context);
+        }
+
+        public sealed class BindAwaiter : INotifyCompletion
+        {
+            private SynchronizationContext? context;
+
+            public BindAwaiter(SynchronizationContext? context) =>
+                this.context = context;
+
+            public bool IsCompleted =>
+                this.context == null;
+
+            public void OnCompleted(Action continuation)
+            {
+                if (Interlocked.CompareExchange(
+                    ref this.context, null, this.context) is { } context)
+                {
+                    context.Post(c => ((Action)c!)(), continuation);
+                }
+                else
+                {
+                    continuation();
+                }
+            }
+
+            public void GetResult() =>
+                Debug.Assert(this.IsCompleted);
+        }
     }
 }

@@ -217,7 +217,7 @@ It's knowledges for gluing browser components.
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
     cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-        $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');");
+        e.ToJavaScript());
 
 // Step 3: Attached JavaScript --> .NET message handler.
 cefSharp.JavascriptMessageReceived += (s, e) =>
@@ -253,6 +253,8 @@ Apache-v2.
 
 ## History
 
+* 0.7.0:
+  * Supported CefSharp.
 * 0.6.0:
   * Supported proxy object on JavaScript side.
   * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)

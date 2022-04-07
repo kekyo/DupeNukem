@@ -40,7 +40,7 @@ namespace DupeNukem.ViewModels
                 await this.WebView2Pile.RentAsync(async webView2 =>
                 {
                     // Startup sequence.
-                    // Bound both WebView2 and DupeNukem Messenger.
+                    // Bound between WebView2 and DupeNukem Messenger.
 
                     // Initialize WebView2.
                     await webView2.EnsureCoreWebView2Async();
@@ -54,10 +54,12 @@ namespace DupeNukem.ViewModels
                         messenger.ReceivedRequest(e.TryGetWebMessageAsString());
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript(true);
+                    var script = messenger.GetInjectionScript();
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());
+
+                    webView2.CoreWebView2.OpenDevToolsWindow();
 
                     // =========================================
                     // Register an object:

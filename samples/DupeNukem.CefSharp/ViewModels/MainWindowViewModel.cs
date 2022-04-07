@@ -47,14 +47,14 @@ namespace DupeNukem.ViewModels
                     // Step 2: Hook up .NET --> JavaScript message handler.
                     messenger.SendRequest += (s, e) =>
                         cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-                            $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');");
+                            e.ToJavaScript());
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     cefSharp.JavascriptMessageReceived += (s, e) =>
                         messenger.ReceivedRequest(e.Message.ToString());
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript(true);
+                    var script = messenger.GetInjectionScript();
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     cefSharp.FrameLoadEnd += (s, e) =>
                     {
@@ -64,9 +64,8 @@ namespace DupeNukem.ViewModels
                                 script.ToString());
                         }
                     };
-#if DEBUG
+
                     cefSharp.ShowDevTools();
-#endif
 
                     // =========================================
                     // Register an object:

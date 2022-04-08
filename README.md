@@ -211,13 +211,33 @@ It is limitation for JavaScript specification.
 
 ----
 
-## Gluing another browsers
+## Gluing browsers
 
-It's knowledges for gluing sample code between your app and browser components.
+There are examples for gluing sample code between your app and browser components.
+
+### Edge WebView2
+
+```csharp
+// WebView2 webView2;
+
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    webView2.CoreWebView2.PostWebMessageAsString(e.Message);
+
+// Step 3: Hook up JavaScript --> .NET message handler.
+webView2.CoreWebView2.WebMessageReceived += (s, e) =>
+    messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+
+// Step 4: Injected Messenger script.
+await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+    messenger.GetInjectionScript().ToString());
+```
 
 ### CefSharp
 
 ```csharp
+// ChromiumWebBrowser cefSharp;
+
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
     cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
@@ -244,6 +264,8 @@ cefSharp.FrameLoadEnd += (s, e) =>
 TODO: Currently unverified
 
 ```csharp
+// WebView webView;
+
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
     _ = webView.InjectJavascriptAsync(e.ToJavaScript());
@@ -263,10 +285,37 @@ webView.Navigated += (s, e) =>
 };
 ```
 
-
 ### Celenium WebDriver on .NET
 
-TODO:
+TODO: WIP
+
+In the case of Celenium WebDriver, there is no standard way to notify message strings from the browser component to .NET side.
+In this example (Step 3), the `alert()` function is used to notify a message strings.
+.NET side, the message is passed to DupeNukem when the alert occurs.
+
+```csharp
+// IWebDriver driver;
+
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    driver.ExecuteJavaScript(e.ToJavaScript());
+
+// Step 3: Attached JavaScript --> .NET message handler.
+var alert = wait.Until(ExpectedConditions.AlertIsPresent());
+messenger.ReceivedRequest(alert.Text);
+alert.Accept();
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+driver.Navigated += (s, e) =>
+{
+    if (e.Result == WebNavigationResult.Success &&
+        e.Url == webView.Source)
+    {
+        driver.ExecuteJavaScript(script.ToString());
+    }
+};
+```
 
 ----
 

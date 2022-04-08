@@ -67,6 +67,9 @@ namespace DupeNukem
 
         public SendRequestEventArgs(string jsonString) =>
             this.JsonString = jsonString;
+
+        public string ToJavaScript() =>
+            $"window.__dupeNukem_Messenger__?.arrivedHostMesssage__('{this.JsonString.Replace("'", "\\'")}');";
     }
 
     public sealed class Messenger : IDisposable

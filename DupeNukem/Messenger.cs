@@ -142,6 +142,9 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
+        public string PostMessageSymbolName =>
+            "__dupeNukem_Messenger_sendToHostMessage__";
+
         public StringBuilder GetInjectionScript(bool debugLog = false)
         {
             using var s = this.GetType().Assembly.

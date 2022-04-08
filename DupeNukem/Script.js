@@ -12,35 +12,33 @@
 // Core dispatcher for JavaScript side.
 class __DupeNukem_Messenger__ {
 
-    constructor(hookup) {
+    constructor() {
         this.suspendings__ = new Map();
         this.id__ = 0;
         this.debugLog__ = false;
 
-        if (hookup != undefined) {
-            this.sendToHostMessage__ = hookup();
+        if (window.external?.notify != undefined) {
+            window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
+            console.info("DupeNukem: Microsoft WebView1 detected.");
+        }
+        else if (window.chrome?.webview?.postMessage != undefined) {
+            window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
+            window.chrome.webview.addEventListener(
+                "message", e => { this.arrivedHostMesssage__(e.data); });
+            console.info("DupeNukem: Microsoft WebView2 detected.");
+        }
+        else if (window.CefSharp?.PostMessage != undefined) {
+            window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
+            console.info("DupeNukem: CefSharp detected.");
+        }
+        else if (window.__dupeNukem_Messenger_sendToHostMessage__ == undefined) {
+            window.__dupeNukem_Messenger_sendToHostMessage__ = function (message) {
+                console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
+            };
+            console.warn("DupeNukem: couldn't detect host browser type.");
         }
         else {
-            if (window?.external?.notify != undefined) {
-                this.sendToHostMessage__ = window.external.notify;
-                console.info("DupeNukem: Microsoft WebView1 detected.");
-            }
-            else if (window?.chrome?.webview?.postMessage != undefined) {
-                this.sendToHostMessage__ = window.chrome.webview.postMessage;
-                window.chrome.webview.addEventListener(
-                    "message", e => { this.arrivedHostMesssage__(e.data); });
-                console.info("DupeNukem: Microsoft WebView2 detected.");
-            }
-            else if (window?.CefSharp?.PostMessage != undefined) {
-                this.sendToHostMessage__ = window.CefSharp.PostMessage;
-                console.info("DupeNukem: CefSharp detected.");
-            }
-            else {
-                this.sendToHostMessage__ = function (message) {
-                    console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
-                };
-                console.warn("DupeNukem: couldn't detect host browser type.");
-            }
+            console.info("DupeNukem: Ready by host managed.");
         }
     }
 
@@ -51,7 +49,7 @@ class __DupeNukem_Messenger__ {
     }
 
     sendExceptionToHost__(message, exceptionBody) {
-        this.sendToHostMessage__(JSON.stringify(
+        window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify(
             { id: message.id, type: "failed", body: exceptionBody, }))
     }
 
@@ -110,13 +108,13 @@ class __DupeNukem_Messenger__ {
                             }
                             else {
                                 f.apply(ti, message.body.args).
-                                    then(result => this.sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
-                                    catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
+                                    then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
+                                    catch(e => window.__dupeNukem_Messenger_sendToHostMessage__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }
                         }
                     }
                     catch (e) {
-                        this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), });
+                        window.__dupeNukem_Messenger_sendToHostMessage__(message, { name: e.name, message: e.message, detail: e.toString(), });
                     }
                     break;
                 case "control":
@@ -143,7 +141,7 @@ class __DupeNukem_Messenger__ {
             try {
                 const descriptor = { resolve: resolve, reject: reject, };
                 this.suspendings__.set(id, descriptor);
-                this.sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: args, }, }));
+                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: args, }, }));
             }
             catch (e) {
                 reject(e);
@@ -246,7 +244,7 @@ function invokeHostMethod(methodName) {
 }
 
 // Final initializer.
-__dupeNukem_Messenger__.sendToHostMessage__(
+__dupeNukem_Messenger_sendToHostMessage__(
     JSON.stringify({ id: "ready", type: "control", body: null, }));
 
 ///////////////////////////////////////////////////////////////////////////////

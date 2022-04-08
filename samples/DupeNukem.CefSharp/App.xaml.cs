@@ -25,8 +25,9 @@ namespace DupeNukem
 
         public App()
         {
+#if NETFRAMEWORK
             CefRuntime.SubscribeAnyCpuAssemblyResolver();
-
+#endif
             //Any CefSharp references have to be in another method with NonInlining
             // attribute so the assembly rolver has time to do it's thing.
             InitializeCefSharp();

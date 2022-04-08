@@ -86,7 +86,8 @@ Setup sequence is gluing between `WebView` and DupeNukem `Messenger`.
 DupeNukem uses only "strings" to exchange messages.
 In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set up to mutually exchange message strings.
 
-(Another browser components maybe same as setup process. See `Another browsers` below.)
+(Another browser components maybe same as setup process.
+See `Gluing another browsers` section below.)
 
 ```csharp
 // Startup sequence.
@@ -210,9 +211,9 @@ It is limitation for JavaScript specification.
 
 ----
 
-## Another browsers
+## Gluing another browsers
 
-It's knowledges for gluing browser components.
+It's knowledges for gluing sample code between your app and browser components.
 
 ### CefSharp
 
@@ -238,9 +239,30 @@ cefSharp.FrameLoadEnd += (s, e) =>
 };
 ```
 
-### Android WebView
+### Xamarin Forms WebView
 
-TODO:
+TODO: Currently unverified
+
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    _ = webView.InjectJavascriptAsync(e.ToJavaScript());
+
+// Step 3: Attached JavaScript --> .NET message handler.
+webView.SetJavascriptCallback(messenger.ReceivedRequest);
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+webView.Navigated += (s, e) =>
+{
+    if (e.Result == WebNavigationResult.Success &&
+        e.Url == webView.Source)
+    {
+        _ = _webView.InjectJavascriptAsync(script.ToString());
+    }
+};
+```
+
 
 ### Celenium WebDriver on .NET
 

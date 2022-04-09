@@ -15,7 +15,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Xam.Plugin.WebView.Abstractions;
-
+using Xamarin.Forms;
 using Command = Epoxy.Command;
 
 namespace DupeNukem.ViewModels

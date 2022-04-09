@@ -59,6 +59,7 @@ namespace DupeNukem.ViewModels
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());
 
+                    // Enable dev tools.
                     webView2.CoreWebView2.OpenDevToolsWindow();
 
                     // =========================================

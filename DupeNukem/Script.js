@@ -17,17 +17,21 @@ class __DupeNukem_Messenger__ {
         this.id__ = 0;
         this.debugLog__ = false;
 
-        if (window.external?.notify != undefined) {
+        if (window.external != undefined &&
+            window.external.notify != undefined) {
             window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
             console.info("DupeNukem: Microsoft WebView1 detected.");
         }
-        else if (window.chrome?.webview?.postMessage != undefined) {
+        else if (window.chrome != undefined &&
+            window.chrome.webview != undefined &&
+            window.chrome.webview.postMessage != undefined) {
             window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
             window.chrome.webview.addEventListener(
                 "message", e => { this.arrivedHostMesssage__(e.data); });
             console.info("DupeNukem: Microsoft WebView2 detected.");
         }
-        else if (window.CefSharp?.PostMessage != undefined) {
+        else if (window.CefSharp != undefined &&
+            window.CefSharp.PostMessage != undefined) {
             window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
             console.info("DupeNukem: CefSharp detected.");
         }

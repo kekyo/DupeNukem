@@ -65,6 +65,7 @@ namespace DupeNukem.ViewModels
                         }
                     };
 
+                    // Enable dev tools.
                     cefSharp.ShowDevTools();
 
                     // =========================================

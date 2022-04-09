@@ -9,12 +9,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-using System;
-
 using Android.App;
 using Android.Content.PM;
-using Android.Runtime;
 using Android.OS;
+using Android.Runtime;
+using Android.Webkit;
+using Xam.Plugin.WebView.Droid;
 
 namespace DupeNukem.Xamarin.Forms.Droid
 {
@@ -26,6 +26,13 @@ namespace DupeNukem.Xamarin.Forms.Droid
             base.OnCreate(savedInstanceState);
 
             global::Xamarin.Essentials.Platform.Init(this, savedInstanceState);
+
+            // https://github.com/SKLn-Rad/Xam.Plugin.Webview
+            FormsWebViewRenderer.Initialize();
+
+            // Enable dev tools.
+            WebView.SetWebContentsDebuggingEnabled(true);
+
             global::Xamarin.Forms.Forms.Init(this, savedInstanceState);
             LoadApplication(new App());
         }

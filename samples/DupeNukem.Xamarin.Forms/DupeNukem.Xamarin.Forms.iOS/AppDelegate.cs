@@ -15,6 +15,7 @@ using System.Linq;
 
 using Foundation;
 using UIKit;
+using Xam.Plugin.WebView.iOS;
 
 namespace DupeNukem.Xamarin.Forms.iOS
 {
@@ -33,6 +34,9 @@ namespace DupeNukem.Xamarin.Forms.iOS
         //
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
         {
+            // https://github.com/SKLn-Rad/Xam.Plugin.Webview
+            FormsWebViewRenderer.Initialize();
+
             global::Xamarin.Forms.Forms.Init();
             LoadApplication(new App());
 

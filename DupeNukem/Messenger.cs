@@ -67,6 +67,9 @@ namespace DupeNukem
 
         public SendRequestEventArgs(string jsonString) =>
             this.JsonString = jsonString;
+
+        public string ToJavaScript() =>
+            $"if (window.__dupeNukem_Messenger__ != undefined && window.__dupeNukem_Messenger__.arrivedHostMesssage__ != undefined) window.__dupeNukem_Messenger__.arrivedHostMesssage__('{this.JsonString.Replace("'", "\\'")}');";
     }
 
     public sealed class Messenger : IDisposable
@@ -97,9 +100,6 @@ namespace DupeNukem
                 NullValueHandling = NullValueHandling.Include,
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
                 ContractResolver = new DefaultContractResolver { NamingStrategy = defaultNamingStrategy, },
-#if DEBUG
-                Formatting = Formatting.Indented,
-#endif
             };
             serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
             return serializer;
@@ -117,7 +117,12 @@ namespace DupeNukem
         {
             this.serializer = serializer;
             this.memberAccessNamingStrategy = memberAccessNamingStrategy;
-            this.timeoutDuration = timeoutDuration ?? TimeSpan.FromSeconds(30);
+            this.timeoutDuration = timeoutDuration ??
+#if DEBUG
+                new TimeSpan(0, 0, 0, 0, -1);
+#else
+                TimeSpan.FromSeconds(30);
+#endif
             this.timeoutTimer = new Timer(this.ReachTimeout);
         }
 
@@ -137,12 +142,20 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public StringBuilder GetInjectionScript()
+        public string PostMessageSymbolName =>
+            "__dupeNukem_Messenger_sendToHostMessage__";
+
+        public StringBuilder GetInjectionScript(bool debugLog = false)
         {
             using var s = this.GetType().Assembly.
                 GetManifestResourceStream("DupeNukem.Script.js");
             var tr = new StreamReader(s!, Encoding.UTF8);
-            return new StringBuilder(tr.ReadToEnd());
+            var sb = new StringBuilder(tr.ReadToEnd());
+            if (debugLog)
+            {
+                sb.AppendLine("__dupeNukem_Messenger__.debugLog__ = true;");
+            }
+            return sb;
         }
 
         private void InjectFunctionProxy(string name, bool isInject)
@@ -336,6 +349,8 @@ namespace DupeNukem
                                 this.InjectFunctionProxy(kv.Key, true);
                             }
 
+                            await this.synchContext.Bind();
+
                             // Invoke ready event.
                             this.Ready?.Invoke(this, EventArgs.Empty);
                         }
@@ -397,7 +412,7 @@ namespace DupeNukem
                             else
                             {
                                 var responseBody = new ExceptionBody(
-                                    "InvalidMethodName", $"Method \"{body.Name}\" is not found.",
+                                    "InvalidMethodName", $"Method '{body.Name}' is not found.",
                                     string.Empty);
 
                                 this.SendExceptionToClient(message, responseBody);

@@ -73,7 +73,11 @@ const result_Add = await dupeNukem.viewModels.calculator.add(1, 2);
 const result_add = await dotnet_add(1, 2);
 ```
 
-Here is an example using [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
+Here is an example using:
+
+* [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
+* [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
+* [`Xamarin.Forms`(`Xam.Plugin.WebView`)](https://www.nuget.org/packages/Xam.Plugin.WebView). ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Xamarin.Forms/ViewModels/ContentPageViewModel.cs))
 
 ----
 
@@ -83,7 +87,8 @@ Setup sequence is gluing between `WebView` and DupeNukem `Messenger`.
 DupeNukem uses only "strings" to exchange messages.
 In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set up to mutually exchange message strings.
 
-(Another browser components maybe same as setup process. See `Another browsers` below.)
+(Another browser components maybe same as setup process.
+See `Gluing another browsers` section below.)
 
 ```csharp
 // Startup sequence.
@@ -207,21 +212,117 @@ It is limitation for JavaScript specification.
 
 ----
 
-## Another browsers
+## Gluing browsers
 
-It's knowledges for gluing browser components.
+There are examples for gluing sample code between your app and browser components.
+
+### Edge WebView2
+
+```csharp
+// WebView2 webView2;
+
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    webView2.CoreWebView2.PostWebMessageAsString(e.Message);
+
+// Step 3: Hook up JavaScript --> .NET message handler.
+webView2.CoreWebView2.WebMessageReceived += (s, e) =>
+    messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+
+// Step 4: Injected Messenger script.
+await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+    messenger.GetInjectionScript().ToString());
+```
 
 ### CefSharp
 
-TODO:
+```csharp
+// ChromiumWebBrowser cefSharp;
 
-### Android WebView
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+        e.ToJavaScript());
 
-TODO:
+// Step 3: Attached JavaScript --> .NET message handler.
+cefSharp.JavascriptMessageReceived += (s, e) =>
+    messenger.ReceivedRequest(e.Message.ToString());
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+cefSharp.FrameLoadEnd += (s, e) =>
+{
+    if (e.Frame.IsMain)
+    {
+        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+            script.ToString());
+    }
+};
+```
+
+### Xamarin Forms (Xam.Plugin.Webview)
+
+Xamarin Forms provides a `WebView` control as a common basis for displaying a web browser.
+However, interoperating with JavaScript requires different implementations for each platform, such as Android and iOS.
+I assume that this is because the same web browsers are used, Chrome for Android and Safari for iOS.
+
+One package that alleviates such cumbersome implementation is [Xam.Plugin.Webview project](https://github.com/SKLn-Rad/Xam.Plugin.Webview).
+Here is an example of using this package:
+
+```csharp
+// FormsWebView formsWebView;
+
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    formsWebView.InjectJavascriptAsync(e.ToJavaScript());
+
+// Step 3: Attached JavaScript --> .NET message handler.
+formsWebView.AddLocalCallback(
+    messenger.PostMessageSymbolName,
+    messenger.ReceivedRequest);
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+formsWebView.OnNavigationCompleted += (s, url) =>
+{
+    if (url == formsWebView.Source)
+    {
+        formsWebView.InjectJavascriptAsync(script.ToString());
+    }
+};
+```
 
 ### Celenium WebDriver on .NET
 
-TODO:
+TODO: WIP
+
+In the case of Celenium WebDriver, there is no standard way to notify message strings from the browser component to .NET side.
+In this example (Step 3), the `alert()` function is used to notify a message strings.
+.NET side, the message is passed to DupeNukem when the alert occurs.
+
+```csharp
+// IWebDriver driver;
+
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    driver.ExecuteJavaScript(e.ToJavaScript());
+
+// Step 3: Attached JavaScript --> .NET message handler.
+var alert = wait.Until(ExpectedConditions.AlertIsPresent());
+messenger.ReceivedRequest(alert.Text);
+alert.Accept();
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript();
+driver.Navigated += (s, e) =>
+{
+    if (e.Result == WebNavigationResult.Success &&
+        e.Url == webView.Source)
+    {
+        driver.ExecuteJavaScript(script.ToString());
+    }
+};
+```
 
 ----
 
@@ -233,6 +334,8 @@ Apache-v2.
 
 ## History
 
+* 0.7.0:
+  * Supported CefSharp and Xamarin Forms.
 * 0.6.0:
   * Supported proxy object on JavaScript side.
   * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)

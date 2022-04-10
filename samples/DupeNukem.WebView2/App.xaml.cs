@@ -11,7 +11,7 @@
 
 using System.Windows;
 
-namespace DupeNukem.WebView2
+namespace DupeNukem
 {
     /// <summary>
     /// Interaction logic for App.xaml

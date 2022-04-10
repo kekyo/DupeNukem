@@ -37,12 +37,10 @@ namespace DupeNukem.ViewModels
             // MainWindow.Loaded:
             this.Loaded = CommandFactory.Create<EventArgs>(async _ =>
             {
-                this.Url = new Uri("https://www.google.com/");
-
                 await this.WebView2Pile.RentAsync(async webView2 =>
                 {
                     // Startup sequence.
-                    // Bound both WebView2 and DupeNukem Messenger.
+                    // Bound between WebView2 and DupeNukem Messenger.
 
                     // Initialize WebView2.
                     await webView2.EnsureCoreWebView2Async();
@@ -60,6 +58,9 @@ namespace DupeNukem.ViewModels
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());
+
+                    // Enable dev tools.
+                    webView2.CoreWebView2.OpenDevToolsWindow();
 
                     // =========================================
                     // Register an object:
@@ -101,6 +102,8 @@ namespace DupeNukem.ViewModels
                         "array",
                         async keys => { await Task.Delay(100); return keys; });
                 });
+
+                this.Url = new Uri("https://www.google.com/");
             });
         }
 
@@ -117,6 +120,9 @@ namespace DupeNukem.ViewModels
             // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>
             {
+                // Test JavaScript --> .NET methods:
+                await messenger.InvokeClientFunctionAsync("tester");
+
                 // Invoke .NET --> JavaScript functions:
                 var result_add = await messenger.InvokeClientFunctionAsync<int>(
                     "js_add", 1, 2);
@@ -158,7 +164,7 @@ namespace DupeNukem.ViewModels
             script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
             script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
             // Invoke JavaScript --> .NET methods:
-            script.AppendLine("(async function () {");
+            script.AppendLine("var tester = async () => {");
             script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
             script.AppendLine("  console.log('add: ' + result_add);");
             script.AppendLine("  const result_sub = await invokeHostMethod('sub', 1, 2);");
@@ -195,7 +201,7 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
             script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
             script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
-            script.AppendLine("})();");
+            script.AppendLine("}");
             // ----
         }
     }

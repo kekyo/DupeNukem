@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net48</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <RootNamespace>DupeNukem</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+    <PackageReference Include="Epoxy.Wpf" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CefSharp.Wpf" Version="100.0.140" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
+  </ItemGroup>
+
+</Project>

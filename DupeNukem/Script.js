@@ -9,55 +9,48 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+// Often you have to give a custom hook up function `dupeNukem_Messenger_hookup`
+// BEFORE this script when you need to another browser support
+// at initializing process on `messenger.GetInjectionScript()`.
+//
+// ```csharp
+// var script = messenger.GetInjectionScript();
+// script.Insert(0, "function dupeNukem_Messenger_hookup() { return function (message) => ... }");
+//
+// webView.InjectScript(script.ToString());
+// ```
+
+//////////////////////////////////////////////////
+
 // Core dispatcher for JavaScript side.
-class __DupeNukem_Messenger__ {
+var __dupeNukem_Messenger__ =
+    __dupeNukem_Messenger__ || new (function () {
 
-    constructor() {
-        this.suspendings__ = new Map();
-        this.id__ = 0;
-        this.debugLog__ = false;
+    this.suspendings__ = new Map();
+    this.id__ = 0;
+    this.debugLog__ = false;
+    this.isInitialized__ = false;
 
-        if (window.external != undefined &&
-            window.external.notify != undefined) {
-            window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
-            console.info("DupeNukem: Microsoft WebView1 detected.");
-        }
-        else if (window.chrome != undefined &&
-            window.chrome.webview != undefined &&
-            window.chrome.webview.postMessage != undefined) {
-            window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
-            window.chrome.webview.addEventListener(
-                "message", e => { this.arrivedHostMesssage__(e.data); });
-            console.info("DupeNukem: Microsoft WebView2 detected.");
-        }
-        else if (window.CefSharp != undefined &&
-            window.CefSharp.PostMessage != undefined) {
-            window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
-            console.info("DupeNukem: CefSharp detected.");
-        }
-        else if (window.__dupeNukem_Messenger_sendToHostMessage__ == undefined) {
-            window.__dupeNukem_Messenger_sendToHostMessage__ = function (message) {
-                console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
-            };
-            console.warn("DupeNukem: couldn't detect host browser type.");
-        }
-        else {
-            console.info("DupeNukem: Ready by host managed.");
-        }
-    }
-
-    log__(message) {
+    this.log__ = (message) => {
         if (this.debugLog__) {
             console.log(message);
         }
-    }
+    };
 
-    sendExceptionToHost__(message, exceptionBody) {
+    this.initialize__ = () => {
+        if (!this.isInitialized__) {
+            this.isInitialized__ = true;
+            __dupeNukem_Messenger_sendToHostMessage__(
+                JSON.stringify({ id: "ready", type: "control", body: null, }));
+        }
+    };
+
+    this.sendExceptionToHost__ = (message, exceptionBody) => {
         window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify(
             { id: message.id, type: "failed", body: exceptionBody, }))
-    }
+    };
 
-    arrivedHostMesssage__(jsonString) {
+    this.arrivedHostMesssage__ = (jsonString) => {
         try {
             const message = JSON.parse(jsonString);
             switch (message.type) {
@@ -137,9 +130,9 @@ class __DupeNukem_Messenger__ {
         catch (e) {
             console.warn("DupeNukem: unknown error: " + e.message + ": " + jsonString);
         }
-    }
+    };
 
-    invokeHostMethod__(name, args) {
+    this.invokeHostMethod__ = (name, args) => {
         return new Promise((resolve, reject) => {
             const id = "client_" + (this.id__++);
             try {
@@ -151,9 +144,9 @@ class __DupeNukem_Messenger__ {
                 reject(e);
             }
         });
-    }
+    };
 
-    getScopedElement__(names) {
+    this.getScopedElement__ = (names) => {
         let current = window;
         for (const name of names.slice(0, names.length - 1)) {
             let next = current[name];
@@ -169,9 +162,9 @@ class __DupeNukem_Messenger__ {
             current = next;
         }
         return current;
-    }
+    };
 
-    injectProxy__(name) {
+    this.injectProxy__ = (name) => {
         const ne = name.split(".");
         const fn = ne[ne.length - 1];
 
@@ -196,9 +189,9 @@ class __DupeNukem_Messenger__ {
             enumerable: true,
             configurable: true,
         });
-    }
+    };
 
-    deleteProxy__(name) {
+    this.deleteProxy__ = (name) => {
         const ne = name.split(".");
         const fn = ne[ne.length - 1];
 
@@ -213,43 +206,51 @@ class __DupeNukem_Messenger__ {
 
         delete current[fn];
     }
-}
 
-//////////////////////////////////////////////////
-
-// Often you have to give a custom hook up function `dupeNukem_Messenger_hookup`
-// BEFORE this script when you need to another browser support
-// at initializing process on `messenger.GetInjectionScript()`.
-//
-// ```csharp
-// var script = messenger.GetInjectionScript();
-// script.Insert(0, "function dupeNukem_Messenger_hookup() { return function (message) => ... }");
-//
-// webView.InjectScript(script.ToString());
-// ```
-
-Object.defineProperty(window, "__dupeNukem_Messenger__", {
-    value: new __DupeNukem_Messenger__(window.dupeNukem_Messenger_hookup),
-    writable: false,
-    enumerable: true,
-    configurable: false,
-});
+    if (window.external != undefined &&
+        window.external.notify != undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
+        console.info("DupeNukem: Microsoft WebView1 detected.");
+    }
+    else if (window.chrome != undefined &&
+        window.chrome.webview != undefined &&
+        window.chrome.webview.postMessage != undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
+        window.chrome.webview.addEventListener(
+            "message", e => { this.arrivedHostMesssage__(e.data); });
+        console.info("DupeNukem: Microsoft WebView2 detected.");
+    }
+    else if (window.CefSharp != undefined &&
+        window.CefSharp.PostMessage != undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
+        console.info("DupeNukem: CefSharp detected.");
+    }
+    else if (window.__dupeNukem_Messenger_sendToHostMessage__ == undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ = function (message) {
+            console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
+        };
+        console.warn("DupeNukem: couldn't detect host browser type.");
+    }
+    else {
+        console.info("DupeNukem: Ready by host managed.");
+    }
+})();
 
 //////////////////////////////////////////////////
 
 // Invoke to .NET method.
 // invokeHostMethod(methodName, ...) : Promise
-function invokeHostMethod(methodName) {
+var invokeHostMethod =
+    invokeHostMethod || function (methodName) {
     const args = new Array(arguments.length - 1);
     for (let i = 0; i < args.length; i++) {
         args[i] = arguments[i + 1];
     }
-    return __dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
+    return window.__dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
 }
 
 // Final initializer.
-__dupeNukem_Messenger_sendToHostMessage__(
-    JSON.stringify({ id: "ready", type: "control", body: null, }));
+__dupeNukem_Messenger__.initialize__();
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -21,7 +21,7 @@ using Command = Epoxy.Command;
 namespace DupeNukem.ViewModels
 {
     [ViewModel]   // PropChanged injection by Epoxy
-    internal sealed class MainWindowViewModel
+    internal sealed class ContentPageViewModel
     {
         public Command Ready { get; }
 
@@ -30,7 +30,7 @@ namespace DupeNukem.ViewModels
         public Pile<FormsWebView> WebViewPile { get; } =
             PileFactory.Create<FormsWebView>();
 
-        public MainWindowViewModel()
+        public ContentPageViewModel()
         {
             // Step 1: Construct DupeNukem Messenger.
             var messenger = new Messenger();

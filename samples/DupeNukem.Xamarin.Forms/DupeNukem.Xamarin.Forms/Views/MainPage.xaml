@@ -8,7 +8,7 @@
     x:Class="DupeNukem.Views.MainPage">
 
     <ContentPage.BindingContext>
-        <viewmodels:MainWindowViewModel />
+        <viewmodels:ContentPageViewModel />
     </ContentPage.BindingContext>
     <epoxy:EventBinder.Events>
         <epoxy:Event EventName="Appearing" Command="{Binding Ready}" />

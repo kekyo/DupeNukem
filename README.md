@@ -76,7 +76,8 @@ const result_add = await dotnet_add(1, 2);
 Here is an example using:
 
 * [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
-* [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) / [`CefSharp.Wpf.NETCore`](https://www.nuget.org/packages/CefSharp.Wpf.NETCore) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
+* [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
+* [`Xamarin.Forms`(`Xam.Plugin.WebView`)](https://www.nuget.org/packages/Xam.Plugin.WebView). ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Xamarin.Forms/ViewModels/ContentPageViewModel.cs))
 
 ----
 
@@ -259,28 +260,34 @@ cefSharp.FrameLoadEnd += (s, e) =>
 };
 ```
 
-### Xamarin Forms WebView
+### Xamarin Forms (Xam.Plugin.Webview)
 
-TODO: Currently unverified
+Xamarin Forms provides a `WebView` control as a common basis for displaying a web browser.
+However, interoperating with JavaScript requires different implementations for each platform, such as Android and iOS.
+I assume that this is because the same web browsers are used, Chrome for Android and Safari for iOS.
+
+One package that alleviates such cumbersome implementation is [Xam.Plugin.Webview project](https://github.com/SKLn-Rad/Xam.Plugin.Webview).
+Here is an example of using this package:
 
 ```csharp
-// WebView webView;
+// FormsWebView formsWebView;
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
-    _ = webView.InjectJavascriptAsync(e.ToJavaScript());
+    formsWebView.InjectJavascriptAsync(e.ToJavaScript());
 
 // Step 3: Attached JavaScript --> .NET message handler.
-webView.SetJavascriptCallback(messenger.ReceivedRequest);
+formsWebView.AddLocalCallback(
+    messenger.PostMessageSymbolName,
+    messenger.ReceivedRequest);
 
 // Step 4: Injected Messenger script.
 var script = messenger.GetInjectionScript();
-webView.Navigated += (s, e) =>
+formsWebView.OnNavigationCompleted += (s, url) =>
 {
-    if (e.Result == WebNavigationResult.Success &&
-        e.Url == webView.Source)
+    if (url == formsWebView.Source)
     {
-        _ = _webView.InjectJavascriptAsync(script.ToString());
+        formsWebView.InjectJavascriptAsync(script.ToString());
     }
 };
 ```
@@ -328,7 +335,7 @@ Apache-v2.
 ## History
 
 * 0.7.0:
-  * Supported CefSharp.
+  * Supported CefSharp and Xamarin Forms.
 * 0.6.0:
   * Supported proxy object on JavaScript side.
   * Implemented automatic thread marshaling (No need for marshalling to UI threads as manually.)

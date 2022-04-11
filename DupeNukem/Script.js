@@ -184,7 +184,7 @@ var __dupeNukem_Messenger__ =
         }
 
         Object.defineProperty(current, fn, {
-            value: invokeHostMethod.bind(current, fn),
+            value: invokeHostMethod.bind(current, name),
             writable: false,
             enumerable: true,
             configurable: true,

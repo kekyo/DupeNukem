@@ -334,6 +334,8 @@ Apache-v2.
 
 ## History
 
+* 0.8.0:
+  * Fixed causing InvalidMethodName exception when use longer method name.
 * 0.7.0:
   * Supported CefSharp and Xamarin Forms.
 * 0.6.0:

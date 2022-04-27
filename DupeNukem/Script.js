@@ -40,8 +40,24 @@ var __dupeNukem_Messenger__ =
     this.initialize__ = () => {
         if (!this.isInitialized__) {
             this.isInitialized__ = true;
-            __dupeNukem_Messenger_sendToHostMessage__(
-                JSON.stringify({ id: "ready", type: "control", body: null, }));
+            if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+                window.__dupeNukem_Messenger_sendToHostMessage__(
+                    JSON.stringify({ id: "ready", type: "control", body: null, }));
+            }
+            else {
+                const innerInit = function () {
+                    if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+                        console.info("DupeNukem: Ready by host managed.");
+                        window.__dupeNukem_Messenger_sendToHostMessage__(
+                            JSON.stringify({ id: "ready", type: "control", body: null, }));
+                    }
+                    else {
+                        console.info("DupeNukem: Waiting managed by host...");
+                        setTimeout(innerInit, 1000);
+                    }
+                }
+                setTimeout(innerInit, 1000);
+            }
         }
     };
 
@@ -225,14 +241,8 @@ var __dupeNukem_Messenger__ =
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
         console.info("DupeNukem: CefSharp detected.");
     }
-    else if (window.__dupeNukem_Messenger_sendToHostMessage__ == undefined) {
-        window.__dupeNukem_Messenger_sendToHostMessage__ = function (message) {
-            console.warn("DupeNukem: couldn't send to host: \"" + message + "\"");
-        };
-        console.warn("DupeNukem: couldn't detect host browser type.");
-    }
-    else {
-        console.info("DupeNukem: Ready by host managed.");
+    else if (window.__dupeNukem_Messenger_sendToHostMessage__ != undefined) {
+        console.info("DupeNukem: Ready to host managed.");
     }
 })();
 

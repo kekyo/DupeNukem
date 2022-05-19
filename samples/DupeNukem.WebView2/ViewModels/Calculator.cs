@@ -40,7 +40,7 @@ namespace DupeNukem.ViewModels
         [JavaScriptTarget]
         public async Task<int> add_cancellable(int a, int b, CancellationToken token)
         {
-            await Task.Delay(1000, token);
+            await Task.Delay(2000, token);
             return a + b;
         }
     }

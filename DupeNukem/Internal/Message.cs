@@ -78,13 +78,11 @@ namespace DupeNukem.Internal
 
     internal readonly struct CancellationTokenBody
     {
-        [JsonProperty("id")]
-        public readonly string Id;
+        [JsonProperty("__scope__")]
+        public readonly string Scope;
 
         [JsonConstructor]
-        public CancellationTokenBody(string id)
-        {
-            this.Id = id;
-        }
+        public CancellationTokenBody(string id) =>
+            this.Scope = id;
     }
 }

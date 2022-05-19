@@ -34,7 +34,7 @@ namespace DupeNukem.Internal
             [JavaScriptTarget("cancel")]
             public Task CancelAsync()
             {
-                cts.Cancel();
+                this.cts.Cancel();
                 return Utilities.CompletedTask;
             }
         }
@@ -43,7 +43,7 @@ namespace DupeNukem.Internal
             JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
         {
             var body = serializer.Deserialize<CancellationTokenBody>(reader);
-            if (!string.IsNullOrEmpty(body.Id))
+            if (!string.IsNullOrEmpty(body.Scope))
             {
                 // Once the CancellationToken argument is found, the CancellationTokenProxy is generated and
                 // make this instance visible from the JavaScript side.
@@ -51,7 +51,7 @@ namespace DupeNukem.Internal
                 // By being called from the JavaScript side, as in "{Id}.cancel".
                 // CancellationTokenSource.Cancel() is called which is held internally.
                 var ctp = new CancellationTokenProxy();
-                DeserializingRegisteredObjectRegistry.TryCapture(body.Id, ctp);
+                DeserializingRegisteredObjectRegistry.TryCapture(body.Scope, ctp);
                 return ctp.Token;
             }
             else

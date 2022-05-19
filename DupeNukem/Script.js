@@ -65,7 +65,7 @@ var __dupeNukem_Messenger__ =
                         successorDescriptor.resolve(message.body);
                     }
                     else {
-                        console.warn("DupeNukem: sprious message received: " + jsonString);
+                        console.warn("DupeNukem: suprious message received: " + jsonString);
                     }
                     break;
                 case "failed":
@@ -79,7 +79,7 @@ var __dupeNukem_Messenger__ =
                         failureDescriptor.reject(e);
                     }
                     else {
-                        console.warn("DupeNukem: sprious message received: " + jsonString);
+                        console.warn("DupeNukem: suprious message received: " + jsonString);
                     }
                     break;
                 case "invoke":
@@ -245,6 +245,25 @@ var invokeHostMethod =
     }
     return window.__dupeNukem_Messenger__.invokeHostMethod__(methodName, args);
 }
+
+// Task.Delay like function
+var delay =
+    delay || function (msec) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(resolve, msec);
+    });
+}
+
+//////////////////////////////////////////////////
+
+// CancellationToken declaration.
+var CancellationToken =
+    CancellationToken || function () {
+        this.__scope__ = "cancellationToken_" + (window.__dupeNukem_Messenger__.id__++);
+        this.cancel = () => invokeHostMethod(this.__scope__ + ".cancel");
+    };
+
+//////////////////////////////////////////////////
 
 // Final initializer.
 __dupeNukem_Messenger__.initialize__();

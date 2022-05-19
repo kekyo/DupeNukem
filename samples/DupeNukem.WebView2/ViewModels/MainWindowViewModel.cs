@@ -157,12 +157,12 @@ namespace DupeNukem.ViewModels
             // You can verify on the developer tooling window,
             // trigger right click on the window and choice context menu,
             // then select console tab.
-
             script.AppendLine("async function js_add(a, b) { return a + b; }");
             script.AppendLine("async function js_sub(a, b) { return a - b; }");
             script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
             script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
             script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
+
             // Invoke JavaScript --> .NET methods:
             script.AppendLine("var tester = async () => {");
             script.AppendLine("  const result_add = await invokeHostMethod('add', 1, 2);");
@@ -177,28 +177,51 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  console.log('enum3: ' + result_enum3);");
             script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
             script.AppendLine("  console.log('array: ' + result_array);");
+
             script.AppendLine("  try {");
             script.AppendLine("    await invokeHostMethod('unknown', 12, 34, 56);");
-            script.AppendLine("    console.log('BUG detected.');");
+            script.AppendLine("    console.log('BUG detected [unknown]');");
             script.AppendLine("  } catch (e) {");
             script.AppendLine("    console.log('PASS: Unknown method invoking [unknown]');");
             script.AppendLine("  }");
+
             script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('dupeNukem.viewModels.calculator.add', 1, 2);");
             script.AppendLine("  console.log('fullName_calc.add: ' + result_fullName_calc_add);");
+
             script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('dupeNukem.viewModels.calculator.sub', 1, 2);");
             script.AppendLine("  console.log('fullName_calc.sub: ' + result_fullName_calc_sub);");
+
             script.AppendLine("  const result_calc_add = await invokeHostMethod('calc.add', 1, 2);");
             script.AppendLine("  console.log('calc.add: ' + result_calc_add);");
+
             script.AppendLine("  const result_calc_sub = await invokeHostMethod('calc.sub', 1, 2);");
             script.AppendLine("  console.log('calc.sub: ' + result_calc_sub);");
+
             script.AppendLine("  try {");
             script.AppendLine("    await invokeHostMethod('calc.mult', 1, 2);");
-            script.AppendLine("    console.log('BUG detected.');");
+            script.AppendLine("    console.log('BUG detected [calc.mult]');");
             script.AppendLine("  } catch (e) {");
             script.AppendLine("    console.log('PASS: Unknown method invoking [calc.mult]');");
             script.AppendLine("  }");
+
+            script.AppendLine("  const ct1 = new CancellationToken();");
+            script.AppendLine("  const result_calc_add_cancellable1 = await invokeHostMethod('calc.add_cancellable', 1, 2, ct1);");
+            script.AppendLine("  console.log('calc.add_cancellable1: ' + result_calc_add_cancellable1);");
+
+            script.AppendLine("  const ct2 = new CancellationToken();");
+            script.AppendLine("  const result_calc_add_cancellable2_p = invokeHostMethod('calc.add_cancellable', 1, 2, ct2);");
+            script.AppendLine("  await delay(1000);");
+            script.AppendLine("  ct2.cancel();");
+            script.AppendLine("  try {");
+            script.AppendLine("    await result_calc_add_cancellable2_p;");
+            script.AppendLine("    console.log('BUG detected [calc.add_cancellable2]');");
+            script.AppendLine("  } catch (e) {");
+            script.AppendLine("    console.log('PASS: Operation canceled [calc.add_cancellable2]');");
+            script.AppendLine("  }");
+
             script.AppendLine("  const result_fullName_proxy_calc_add = await dupeNukem.viewModels.calculator.add(1, 2);");
             script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
+
             script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
             script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
             script.AppendLine("}");

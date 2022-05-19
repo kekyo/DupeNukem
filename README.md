@@ -212,6 +212,54 @@ It is limitation for JavaScript specification.
 
 ----
 
+## Cancellation
+
+.NET has the `CancellationToken` type as the standard infrastructure for
+asynchronous processing.
+However, JavaScript does not have such a thing.
+DupeNukem defines a `CancellationToken` type on the JavaScript side
+that can be used as follows:
+
+```javascript
+// Prepare a CancellationToken
+const ct = new CancellationToken();
+
+// Invoke .NET method asynchronously:
+const promise =
+    dupeNukem.viewModels.mainWindowViewModel.longAwaitedMethod(1, 2, ct);
+
+// (attempt to cancel asynchronous processing if necessary:)
+ct.cancel();
+
+try {
+    // Get result (exception thrown if cancellation propagated.)
+    const result = await promise;
+}
+catch (e) {
+    // ...
+}
+```
+
+.NET implementation:
+
+```csharp
+[JavaScriptTarget("longAwaitedMethod")]
+public async Task<int> LongAwaitedMethod(int a, int b, CancellationToken ct)
+{
+    // Pass a CancellationToken to a time-consuming asynchronous process:
+    await Task.Delay(1000, ct);
+    return a + b;
+}
+```
+
+NOTE:
+
+* `CancellationToken` argument(s) can be defined anywhere in the argument set.
+* The above example is a call in the JavaScript --> .NET direction.
+  .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.10.0.
+
+----
+
 ## Gluing browsers
 
 There are examples for gluing sample code between your app and browser components.
@@ -334,6 +382,8 @@ Apache-v2.
 
 ## History
 
+* 0.10.0:
+  * Supported `CancellationToken` when JavaScript --> .NET direction calling.
 * 0.9.0:
   * Fixed didn't initialize on XF iOS.
 * 0.8.0:

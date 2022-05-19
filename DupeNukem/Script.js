@@ -9,19 +9,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// Often you have to give a custom hook up function `dupeNukem_Messenger_hookup`
-// BEFORE this script when you need to another browser support
-// at initializing process on `messenger.GetInjectionScript()`.
-//
-// ```csharp
-// var script = messenger.GetInjectionScript();
-// script.Insert(0, "function dupeNukem_Messenger_hookup() { return function (message) => ... }");
-//
-// webView.InjectScript(script.ToString());
-// ```
-
-//////////////////////////////////////////////////
-
 // Core dispatcher for JavaScript side.
 var __dupeNukem_Messenger__ =
     __dupeNukem_Messenger__ || new (function () {

@@ -171,18 +171,24 @@ namespace DupeNukem
         }
 
         internal string RegisterMethod(
-            string name, MethodDescriptor method, bool hasSpecifiedName)
+            string name, MethodDescriptor method, bool hasSpecifiedName, bool injectProxy)
         {
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
-            this.InjectFunctionProxy(n, true);
+            if (injectProxy)
+            {
+                this.InjectFunctionProxy(n, true);
+            }
             this.methods.SafeAdd(n, method);
             return n;
         }
 
-        internal void UnregisterMethod(string name, bool hasSpecifiedName)
+        internal void UnregisterMethod(string name, bool hasSpecifiedName, bool injectedProxy)
         {
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
-            this.InjectFunctionProxy(n, false);
+            if (injectedProxy)
+            {
+                this.InjectFunctionProxy(n, false);
+            }
             this.methods.SafeRemove(n);
         }
 

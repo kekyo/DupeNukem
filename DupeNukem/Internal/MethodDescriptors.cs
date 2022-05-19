@@ -45,7 +45,7 @@ namespace DupeNukem.Internal
             var objects = DeserializingRegisteredObjectRegistry.Finish();
             foreach (var entry in objects)
             {
-                this.messenger.RegisterObject(entry.Key, entry.Value);
+                this.messenger.RegisterObject(entry.Key, entry.Value, false);
             }
             return new Disposer(this.messenger, objects);
         }
@@ -65,7 +65,7 @@ namespace DupeNukem.Internal
             {
                 foreach (var entry in this.objects)
                 {
-                    this.messenger.UnregisterObject(entry.Key, entry.Value);
+                    this.messenger.UnregisterObject(entry.Key, entry.Value, false);
                 }
             }
         }

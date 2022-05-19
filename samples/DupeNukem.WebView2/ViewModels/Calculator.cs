@@ -9,6 +9,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DupeNukem.ViewModels
@@ -34,6 +35,13 @@ namespace DupeNukem.ViewModels
         {
             await Task.Delay(100);
             return a * b;
+        }
+
+        [JavaScriptTarget]
+        public async Task<int> add_cancellable(int a, int b, CancellationToken token)
+        {
+            await Task.Delay(2000, token);
+            return a + b;
         }
     }
 }

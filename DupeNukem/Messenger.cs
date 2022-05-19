@@ -102,6 +102,7 @@ namespace DupeNukem
                 ContractResolver = new DefaultContractResolver { NamingStrategy = defaultNamingStrategy, },
             };
             serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
+            serializer.Converters.Add(new CancellationTokenConverter());
             return serializer;
         }
 

@@ -75,4 +75,16 @@ namespace DupeNukem.Internal
             this.Detail = detail;
         }
     }
+
+    internal readonly struct CancellationTokenBody
+    {
+        [JsonProperty("id")]
+        public readonly string Id;
+
+        [JsonConstructor]
+        public CancellationTokenBody(string id)
+        {
+            this.Id = id;
+        }
+    }
 }

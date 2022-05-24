@@ -159,10 +159,27 @@ namespace DupeNukem
             return sb;
         }
 
-        private void InjectFunctionProxy(string name, bool isInject)
+        private void InjectFunctionProxy(string name, MethodMetadata metadata)
+        {
+            var obsolete = metadata.Obsolete;
+
+            var injectBody = new InjectBody(
+                name,
+                obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
+                obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
+            var request = new Message(
+                "inject",
+                MessageTypes.Control,
+                JToken.FromObject(injectBody, this.serializer));
+            var tw = new StringWriter();
+            this.serializer.Serialize(tw, request);
+            this.SendMessageToClient(tw.ToString());
+        }
+
+        private void DeleteFunctionProxy(string name)
         {
             var request = new Message(
-                isInject ? "inject" : "delete",
+                "delete",
                 MessageTypes.Control,
                 JToken.FromObject(name, this.serializer));
             var tw = new StringWriter();
@@ -171,25 +188,28 @@ namespace DupeNukem
         }
 
         internal string RegisterMethod(
-            string name, MethodDescriptor method, bool hasSpecifiedName, bool injectProxy)
+            string name, MethodDescriptor method, bool hasSpecifiedName)
         {
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
-            if (injectProxy)
+            if (method.Metadata.IsProxyInjecting)
             {
-                this.InjectFunctionProxy(n, true);
+                this.InjectFunctionProxy(n, method.Metadata);
             }
             this.methods.SafeAdd(n, method);
             return n;
         }
 
-        internal void UnregisterMethod(string name, bool hasSpecifiedName, bool injectedProxy)
+        internal void UnregisterMethod(string name, bool hasSpecifiedName)
         {
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
-            if (injectedProxy)
+            if (this.methods.TryGetValue(n, out var method))
             {
-                this.InjectFunctionProxy(n, false);
+                if (method.Metadata.IsProxyInjecting)
+                {
+                    this.DeleteFunctionProxy(n);
+                }
+                this.methods.SafeRemove(n);
             }
-            this.methods.SafeRemove(n);
         }
 
         public string[] RegisteredMethods
@@ -353,7 +373,10 @@ namespace DupeNukem
                             // Inject JavaScript proxies.
                             foreach (var kv in this.methods)
                             {
-                                this.InjectFunctionProxy(kv.Key, true);
+                                if (kv.Value.Metadata.IsProxyInjecting)
+                                {
+                                    this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
+                                }
                             }
 
                             await this.synchContext.Bind();

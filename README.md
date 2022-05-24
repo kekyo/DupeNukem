@@ -120,6 +120,7 @@ await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
 Bulk register methods on an object:
 
 * Easy way, recommended.
+* All methods automatically inject proxy functions in JavaScript side.
 
 ```csharp
 // Apply `JavaScriptTarget` attribute on target callee method.
@@ -257,6 +258,49 @@ NOTE:
 * `CancellationToken` argument(s) can be defined anywhere in the argument set.
 * The above example is a call in the JavaScript --> .NET direction.
   .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.10.0.
+
+----
+
+## Obsoleted / Deprecated
+
+In JavaScript --> .NET method invoking, the following JavaScript debugging aids are available
+if the `Obsolete` attribute is applied to the .NET method:
+
+* If the normal `Obsolete` attribute is applied,
+  the following warning message will appear in the JavaScript console output:
+
+```csharp
+[Obsolete("This method will be obsoleted, switch to use `add_ng`.")]
+public static Task<int> add(int a, int b)
+{
+  ...
+}
+```
+
+```
+calc.add is obsoleted: This method will be obsoleted, switch to use `add_ng`.
+```
+
+* Also, if an error flag is applied to the `Obsolete` attribute,
+  an exception will be thrown on the fly:
+
+```csharp
+[Obsolete("This method is obsoleted, have to switch `add_ng`.", true)]
+public static Task<int> add(int a, int b) =>
+    throw new InvalidOperationException("This method is obsoleted, have to switch `add_ng`.");
+```
+
+```
+try {
+    consr r = await calc.add(1, 2);
+}
+catch (e) {
+    // Raise error: calc.add is obsoleted: This method is obsoleted, have to switch `add_ng`.
+}
+```
+
+Note: This function is only available for proxy access,
+and will not work if called using the `invokeHostMethod()` function.
 
 ----
 

@@ -22,10 +22,14 @@ namespace DupeNukem.Internal
 {
     internal sealed class MethodMetadata
     {
+        public readonly bool IsProxyInjecting;
         public readonly ObsoleteAttribute? Obsolete;
 
-        public MethodMetadata(ObsoleteAttribute? obsolete) =>
+        public MethodMetadata(bool isProxyInjecting, ObsoleteAttribute? obsolete)
+        {
+            this.IsProxyInjecting = isProxyInjecting;
             this.Obsolete = obsolete;
+        }
     }
 
     internal abstract class MethodDescriptor
@@ -78,7 +82,7 @@ namespace DupeNukem.Internal
             {
                 foreach (var entry in this.objects)
                 {
-                    this.messenger.UnregisterObject(entry.Key, entry.Value, false);
+                    this.messenger.UnregisterObject(entry.Key, entry.Value);
                 }
             }
         }

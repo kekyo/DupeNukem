@@ -13,6 +13,7 @@ using DupeNukem.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace DupeNukem
@@ -23,62 +24,62 @@ namespace DupeNukem
             this Messenger messenger, Func<Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
-                new ActionDescriptor(action, messenger),
+                new ActionDescriptor(action, new(null), messenger),
                 false, true);
         public static string RegisterAction<T0>(
             this Messenger messenger, Func<T0, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
-                new ActionDescriptor<T0>(action, messenger),
+                new ActionDescriptor<T0>(action, new(null), messenger),
                 false, true);
         public static string RegisterAction<T0, T1>(
             this Messenger messenger, Func<T0, T1, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
-                new ActionDescriptor<T0, T1>(action, messenger),
+                new ActionDescriptor<T0, T1>(action, new(null), messenger),
                 false, true);
         public static string RegisterAction<T0, T1, T2>(
             this Messenger messenger, Func<T0, T1, T2, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
-                new ActionDescriptor<T0, T1, T2>(action, messenger),
+                new ActionDescriptor<T0, T1, T2>(action, new(null), messenger),
                 false, true);
         public static string RegisterAction<T0, T1, T2, T3>(
             this Messenger messenger, Func<T0, T1, T2, T3, Task> action) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(action),
-                new ActionDescriptor<T0, T1, T2, T3>(action, messenger),
+                new ActionDescriptor<T0, T1, T2, T3>(action, new(null), messenger),
                 false, true);
 
         public static void RegisterAction(
             this Messenger messenger, string name, Func<Task> action) =>
             messenger.RegisterMethod(
                 name,
-                new ActionDescriptor(action, messenger),
+                new ActionDescriptor(action, new(null), messenger),
                 true, true);
         public static void RegisterAction<T0>(
             this Messenger messenger, string name, Func<T0, Task> action) =>
             messenger.RegisterMethod(
                 name,
-                new ActionDescriptor<T0>(action, messenger),
+                new ActionDescriptor<T0>(action, new(null), messenger),
                 true, true);
         public static void RegisterAction<T0, T1>(
             this Messenger messenger, string name, Func<T0, T1, Task> action) =>
             messenger.RegisterMethod(
                 name,
-                new ActionDescriptor<T0, T1>(action, messenger),
+                new ActionDescriptor<T0, T1>(action, new(null), messenger),
                 true, true);
         public static void RegisterAction<T0, T1, T2>(
             this Messenger messenger, string name, Func<T0, T1, T2, Task> action) =>
             messenger.RegisterMethod(
                 name,
-                new ActionDescriptor<T0, T1, T2>(action, messenger),
+                new ActionDescriptor<T0, T1, T2>(action, new(null), messenger),
                 true, true);
         public static void RegisterAction<T0, T1, T2, T3>(
             this Messenger messenger, string name, Func<T0, T1, T2, T3, Task> action) =>
             messenger.RegisterMethod(
                 name,
-                new ActionDescriptor<T0, T1, T2, T3>(action, messenger),
+                new ActionDescriptor<T0, T1, T2, T3>(action, new(null), messenger),
                 true, true);
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -87,90 +88,93 @@ namespace DupeNukem
             this Messenger messenger, Func<Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
-                new FuncDescriptor<TR>(func, messenger),
+                new FuncDescriptor<TR>(func, new(null), messenger),
                 false, true);
         public static string RegisterFunc<TR, T0>(
             this Messenger messenger, Func<T0, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
-                new FuncDescriptor<TR, T0>(func, messenger),
+                new FuncDescriptor<TR, T0>(func, new(null), messenger),
                 false, true);
         public static string RegisterFunc<TR, T0, T1>(
             this Messenger messenger, Func<T0, T1, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
-                new FuncDescriptor<TR, T0, T1>(func, messenger),
+                new FuncDescriptor<TR, T0, T1>(func, new(null), messenger),
                 false, true);
         public static string RegisterFunc<TR, T0, T1, T2>(
             this Messenger messenger, Func<T0, T1, T2, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
-                new FuncDescriptor<TR, T0, T1, T2>(func, messenger),
+                new FuncDescriptor<TR, T0, T1, T2>(func, new(null), messenger),
                 false, true);
         public static string RegisterFunc<TR, T0, T1, T2, T3>(
             this Messenger messenger, Func<T0, T1, T2, T3, Task<TR>> func) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(func),
-                new FuncDescriptor<TR, T0, T1, T2, T3>(func, messenger),
+                new FuncDescriptor<TR, T0, T1, T2, T3>(func, new(null), messenger),
                 false, true);
 
         public static void RegisterFunc<TR>(
             this Messenger messenger, string name, Func<Task<TR>> func) =>
             messenger.RegisterMethod(
                 name,
-                new FuncDescriptor<TR>(func, messenger),
+                new FuncDescriptor<TR>(func, new(null), messenger),
                 true, true);
         public static void RegisterFunc<TR, T0>(
             this Messenger messenger, string name, Func<T0, Task<TR>> func) =>
             messenger.RegisterMethod(
                 name,
-                new FuncDescriptor<TR, T0>(func, messenger),
+                new FuncDescriptor<TR, T0>(func, new(null), messenger),
                 true, true);
         public static void RegisterFunc<TR, T0, T1>(
             this Messenger messenger, string name, Func<T0, T1, Task<TR>> func) =>
             messenger.RegisterMethod(
                 name,
-                new FuncDescriptor<TR, T0, T1>(func, messenger),
+                new FuncDescriptor<TR, T0, T1>(func, new(null), messenger),
                 true, true);
         public static void RegisterFunc<TR, T0, T1, T2>(
             this Messenger messenger, string name, Func<T0, T1, T2, Task<TR>> func) =>
             messenger.RegisterMethod(
                 name,
-                new FuncDescriptor<TR, T0, T1, T2>(func, messenger),
+                new FuncDescriptor<TR, T0, T1, T2>(func, new(null), messenger),
                 true, true);
         public static void RegisterFunc<TR, T0, T1, T2, T3>(
             this Messenger messenger, string name, Func<T0, T1, T2, T3, Task<TR>> func) =>
             messenger.RegisterMethod(
                 name,
-                new FuncDescriptor<TR, T0, T1, T2, T3>(func, messenger),
+                new FuncDescriptor<TR, T0, T1, T2, T3>(func, new(null), messenger),
                 true, true);
 
         ///////////////////////////////////////////////////////////////////////////////
+
+        private static MethodMetadata GetMetadata(MethodInfo method) =>
+            new MethodMetadata(method.GetCustomAttributes(typeof(ObsoleteAttribute), true) is ObsoleteAttribute[] oas ? oas.FirstOrDefault() : null);
 
         public static string RegisterDynamicMethod(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
-                new DynamicMethodDescriptor(method, messenger),
+                new DynamicMethodDescriptor(method, GetMetadata(method.Method), messenger),
                 false, true);
         public static string RegisterDynamicMethod<TR>(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
-                new DynamicMethodDescriptor<TR>(method, messenger),
+                new DynamicMethodDescriptor<TR>(method, GetMetadata(method.Method), messenger),
                 false, true);
 
         public static void RegisterDynamicMethod(
             this Messenger messenger, string name, Delegate method) =>
             messenger.RegisterMethod(
                 name,
-                new DynamicMethodDescriptor(method, messenger),
+                new DynamicMethodDescriptor(method, GetMetadata(method.Method), messenger),
                 true, true);
         public static void RegisterDynamicMethod<TR>(
             this Messenger messenger, string name, Delegate method) =>
             messenger.RegisterMethod(
                 name,
-                new DynamicMethodDescriptor<TR>(method, messenger),
+                new DynamicMethodDescriptor<TR>(method, GetMetadata(method.Method), messenger),
                 true, true);
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -202,7 +206,7 @@ namespace DupeNukem
             EnumerateRegisterObjectMethods(messenger, scopeName, target, false).
             Select(entry => messenger.RegisterMethod(
                 entry.MethodName,
-                new ObjectMethodDescriptor(target, entry.Method, messenger),
+                new ObjectMethodDescriptor(target, entry.Method, GetMetadata(entry.Method), messenger),
                 true, injectProxy)).
             ToArray();
 
@@ -211,7 +215,7 @@ namespace DupeNukem
             EnumerateRegisterObjectMethods(messenger, scopeName, target, false).
             Select(entry => messenger.RegisterMethod(
                 entry.MethodName,
-                new ObjectMethodDescriptor(target, entry.Method, messenger),
+                new ObjectMethodDescriptor(target, entry.Method, GetMetadata(entry.Method), messenger),
                 true, true)).
             ToArray();
 
@@ -220,7 +224,7 @@ namespace DupeNukem
             EnumerateRegisterObjectMethods(messenger, null, target, isFullName).
             Select(entry => messenger.RegisterMethod(
                 entry.MethodName,
-                new ObjectMethodDescriptor(target, entry.Method, messenger),
+                new ObjectMethodDescriptor(target, entry.Method, GetMetadata(entry.Method), messenger),
                 true, true)).
             ToArray();
 

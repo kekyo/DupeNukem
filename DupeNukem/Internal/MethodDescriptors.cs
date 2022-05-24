@@ -20,12 +20,25 @@ using Newtonsoft.Json.Linq;
 
 namespace DupeNukem.Internal
 {
+    internal sealed class MethodMetadata
+    {
+        public readonly ObsoleteAttribute? Obsolete;
+
+        public MethodMetadata(ObsoleteAttribute? obsolete) =>
+            this.Obsolete = obsolete;
+    }
+
     internal abstract class MethodDescriptor
     {
         private readonly Messenger messenger;
 
-        protected MethodDescriptor(Messenger messenger) =>
+        protected MethodDescriptor(Messenger messenger, MethodMetadata metadata)
+        {
             this.messenger = messenger;
+            this.Metadata = metadata;
+        }
+
+        public MethodMetadata Metadata { get; }
 
         public abstract Task<object?> InvokeAsync(JToken?[] args);
 
@@ -77,8 +90,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<Task> action;
 
-        public ActionDescriptor(Func<Task> action, Messenger messenger) :
-            base(messenger) =>
+        public ActionDescriptor(
+            Func<Task> action, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -94,8 +108,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, Task> action;
 
-        public ActionDescriptor(Func<T0, Task> action, Messenger messenger) :
-            base(messenger) =>
+        public ActionDescriptor(
+            Func<T0, Task> action, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -114,8 +129,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, Task> action, Messenger messenger) :
-            base(messenger) =>
+        public ActionDescriptor(
+            Func<T0, T1, Task> action, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -135,8 +151,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, T2, Task> action, Messenger messenger) :
-            base(messenger) =>
+        public ActionDescriptor(
+            Func<T0, T1, T2, Task> action, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -157,8 +174,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, T3, Task> action;
 
-        public ActionDescriptor(Func<T0, T1, T2, T3, Task> action, Messenger messenger) :
-            base(messenger) =>
+        public ActionDescriptor(
+            Func<T0, T1, T2, T3, Task> action, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.action = action;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -182,8 +200,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<Task<TR>> func;
 
-        public FuncDescriptor(Func<Task<TR>> func, Messenger messenger) :
-            base(messenger) =>
+        public FuncDescriptor(
+            Func<Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -198,8 +217,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, Task<TR>> func, Messenger messenger) :
-            base(messenger) =>
+        public FuncDescriptor(
+            Func<T0, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -217,8 +237,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, Task<TR>> func, Messenger messenger) :
-            base(messenger) =>
+        public FuncDescriptor(
+            Func<T0, T1, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -237,8 +258,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, T2, Task<TR>> func, Messenger messenger) :
-            base(messenger) =>
+        public FuncDescriptor(
+            Func<T0, T1, T2, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -258,8 +280,9 @@ namespace DupeNukem.Internal
     {
         private readonly Func<T0, T1, T2, T3, Task<TR>> func;
 
-        public FuncDescriptor(Func<T0, T1, T2, T3, Task<TR>> func, Messenger messenger) :
-            base(messenger) =>
+        public FuncDescriptor(
+            Func<T0, T1, T2, T3, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata) =>
             this.func = func;
 
         public override async Task<object?> InvokeAsync(JToken?[] args)
@@ -285,8 +308,8 @@ namespace DupeNukem.Internal
         private readonly Type[] parameterTypes;
 
         public ObjectMethodDescriptor(
-            object target, MethodInfo method, Messenger messenger) :
-            base(messenger)
+            object target, MethodInfo method, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata)
         {
             this.target = target;
             this.method = method;
@@ -316,8 +339,9 @@ namespace DupeNukem.Internal
         private readonly Delegate method;
         private readonly Type[] parameterTypes;
 
-        public DynamicMethodDescriptor(Delegate method, Messenger messenger) :
-            base(messenger)
+        public DynamicMethodDescriptor(
+            Delegate method, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata)
         {
             this.method = method;
             this.parameterTypes = this.method.Method.
@@ -345,8 +369,9 @@ namespace DupeNukem.Internal
         private readonly Delegate method;
         private readonly Type[] parameterTypes;
 
-        public DynamicMethodDescriptor(Delegate method, Messenger messenger) :
-            base(messenger)
+        public DynamicMethodDescriptor(
+            Delegate method, MethodMetadata metadata, Messenger messenger) :
+            base(messenger, metadata)
         {
             this.method = method;
             this.parameterTypes = this.method.Method.

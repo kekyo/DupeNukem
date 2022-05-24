@@ -43,6 +43,24 @@ namespace DupeNukem.Internal
         }
     }
 
+    internal readonly struct InjectBody
+    {
+        [JsonProperty("name")]
+        public readonly string Name;
+        [JsonProperty("obsolete", NullValueHandling = NullValueHandling.Ignore)]
+        public readonly string? Obsolete;
+        [JsonProperty("obsoleteMessage", NullValueHandling = NullValueHandling.Ignore)]
+        public readonly string? ObsoleteMessage;
+
+        [JsonConstructor]
+        public InjectBody(string name, string? obsolete, string? obsoleteMessage)
+        {
+            this.Name = name;
+            this.Obsolete = obsolete;
+            this.ObsoleteMessage = obsoleteMessage;
+        }
+    }
+
     internal readonly struct InvokeBody
     {
         [JsonProperty("name")]

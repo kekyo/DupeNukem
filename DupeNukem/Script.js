@@ -167,7 +167,9 @@ var __dupeNukem_Messenger__ =
         return current;
     };
 
-    this.injectProxy__ = (name) => {
+    this.injectProxy__ = (entry) => {
+        const name = entry.name;
+
         const ne = name.split(".");
         const fn = ne[ne.length - 1];
 
@@ -187,7 +189,7 @@ var __dupeNukem_Messenger__ =
         }
 
         Object.defineProperty(current, fn, {
-            value: invokeHostMethod.bind(current, name),
+            value: window.__dupeNukem_invokeHostMethod__.bind(current, entry),
             writable: false,
             enumerable: true,
             configurable: true,
@@ -232,6 +234,23 @@ var __dupeNukem_Messenger__ =
         console.info("DupeNukem: Ready to host managed.");
     }
 })();
+
+var __dupeNukem_invokeHostMethod__ =
+    __dupeNukem_invokeHostMethod__ || function (entry) {
+        const name = entry.name;
+        const obsolete = entry.obsolete;
+        if (obsolete == "obsolete") {
+            console.warn(entry.obsoleteMessage);
+        }
+        else if (obsolete == "error") {
+            throw new Error(entry.obsoleteMessage);
+        }
+        const args = new Array(arguments.length - 1);
+        for (let i = 0; i < args.length; i++) {
+            args[i] = arguments[i + 1];
+        }
+        return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
+    }
 
 //////////////////////////////////////////////////
 

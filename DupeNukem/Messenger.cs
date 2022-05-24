@@ -159,10 +159,27 @@ namespace DupeNukem
             return sb;
         }
 
-        private void InjectFunctionProxy(string name, bool isInject)
+        private void InjectFunctionProxy(string name, MethodMetadata metadata)
+        {
+            var obsolete = metadata.Obsolete;
+
+            var injectBody = new InjectBody(
+                name,
+                obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
+                obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
+            var request = new Message(
+                "inject",
+                MessageTypes.Control,
+                JToken.FromObject(injectBody, this.serializer));
+            var tw = new StringWriter();
+            this.serializer.Serialize(tw, request);
+            this.SendMessageToClient(tw.ToString());
+        }
+
+        private void DeleteFunctionProxy(string name)
         {
             var request = new Message(
-                isInject ? "inject" : "delete",
+                "delete",
                 MessageTypes.Control,
                 JToken.FromObject(name, this.serializer));
             var tw = new StringWriter();
@@ -176,7 +193,7 @@ namespace DupeNukem
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
             if (injectProxy)
             {
-                this.InjectFunctionProxy(n, true);
+                this.InjectFunctionProxy(n, method.Metadata);
             }
             this.methods.SafeAdd(n, method);
             return n;
@@ -187,7 +204,7 @@ namespace DupeNukem
             var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
             if (injectedProxy)
             {
-                this.InjectFunctionProxy(n, false);
+                this.DeleteFunctionProxy(n);
             }
             this.methods.SafeRemove(n);
         }
@@ -353,7 +370,7 @@ namespace DupeNukem
                             // Inject JavaScript proxies.
                             foreach (var kv in this.methods)
                             {
-                                this.InjectFunctionProxy(kv.Key, true);
+                                this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
                             }
 
                             await this.synchContext.Bind();

@@ -88,7 +88,7 @@ DupeNukem uses only "strings" to exchange messages.
 In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set up to mutually exchange message strings.
 
 (Another browser components maybe same as setup process.
-See `Gluing another browsers` section below.)
+See [Gluing browsers](#gluing-browsers) section below.)
 
 ```csharp
 // Startup sequence.
@@ -227,13 +227,14 @@ const ct = new CancellationToken();
 
 // Invoke .NET method asynchronously:
 const promise =
-    dupeNukem.viewModels.mainWindowViewModel.longAwaitedMethod(1, 2, ct);
+    dupeNukem.viewModels.mainWindowViewModel.
+    longAwaitedMethod(1, 2, ct);
 
-// (attempt to cancel asynchronous processing if necessary:)
+// (attempt to cancel asynchronous processing if necessary)
 ct.cancel();
 
 try {
-    // Get result (exception thrown if cancellation propagated.)
+    // Get result (exception thrown if cancellation propagated)
     const result = await promise;
 }
 catch (e) {
@@ -245,7 +246,8 @@ catch (e) {
 
 ```csharp
 [JavaScriptTarget("longAwaitedMethod")]
-public async Task<int> LongAwaitedMethod(int a, int b, CancellationToken ct)
+public async Task<int> LongAwaitedMethod(
+    int a, int b, CancellationToken ct)
 {
     // Pass a CancellationToken to a time-consuming asynchronous process:
     await Task.Delay(1000, ct);
@@ -264,16 +266,16 @@ NOTE:
 ## Obsoleted / Deprecated
 
 In JavaScript --> .NET method invoking, the following JavaScript debugging aids are available
-if the `Obsolete` attribute is applied to the .NET method:
+if the `Obsolete` attribute is applied to the .NET method.
 
-* If the normal `Obsolete` attribute is applied,
-  the following warning message will appear in the JavaScript console output:
+If the normal `Obsolete` attribute is applied,
+the following warning message will appear in the JavaScript console output:
 
 ```csharp
 [Obsolete("This method will be obsoleted, switch to use `add_ng`.")]
 public static Task<int> add(int a, int b)
 {
-  ...
+  // ...
 }
 ```
 
@@ -281,16 +283,17 @@ public static Task<int> add(int a, int b)
 calc.add is obsoleted: This method will be obsoleted, switch to use `add_ng`.
 ```
 
-* Also, if an error flag is applied to the `Obsolete` attribute,
-  an exception will be thrown on the fly:
+Also, if an error flag is applied to the `Obsolete` attribute,
+an exception will be thrown on the fly:
 
 ```csharp
 [Obsolete("This method is obsoleted, have to switch `add_ng`.", true)]
 public static Task<int> add(int a, int b) =>
-    throw new InvalidOperationException("This method is obsoleted, have to switch `add_ng`.");
+    throw new InvalidOperationException(
+        "This method is obsoleted, have to switch `add_ng`.");
 ```
 
-```
+```javascript
 try {
     consr r = await calc.add(1, 2);
 }
@@ -426,6 +429,9 @@ Apache-v2.
 
 ## History
 
+* 0.11.0:
+  * Help debugging by warning log and raise exception at JavaScript when , .NET method is marked with `Obsolete` attribute.
+  * Fixed registering implicit proxy methods at around browser reloading. 
 * 0.10.0:
   * Supported `CancellationToken` when JavaScript --> .NET direction calling.
 * 0.9.0:

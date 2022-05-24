@@ -142,7 +142,7 @@ namespace DupeNukem.ViewModels
                 try
                 {
                     await messenger.InvokeClientFunctionAsync("unknown");
-                    Trace.WriteLine("BUG detected.");
+                    Trace.WriteLine("BUG detected. [unknown]");
                 }
                 catch (JavaScriptException)
                 {
@@ -224,6 +224,20 @@ namespace DupeNukem.ViewModels
 
             script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
             script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
+
+            script.AppendLine("  const result_calc_add_obsoleted1 = await invokeHostMethod('calc.add_obsoleted1', 1, 2);");
+            script.AppendLine("  console.log('calc.add_obsoleted1: ' + result_calc_add_obsoleted1);");
+
+            script.AppendLine("  const result_calc_add_obsoleted2 = await invokeHostMethod('calc.add_obsoleted2', 1, 2);");
+            script.AppendLine("  console.log('calc.add_obsoleted2: ' + result_calc_add_obsoleted2);");
+
+            script.AppendLine("  try {");
+            script.AppendLine("    await invokeHostMethod('calc.add_obsoleted3', 1, 2);");
+            script.AppendLine("    console.log('BUG detected [calc.add_obsoleted3]');");
+            script.AppendLine("  } catch (e) {");
+            script.AppendLine("    console.log('PASS: Fatal obsoleted [calc.add_obsoleted3]');");
+            script.AppendLine("  }");
+
             script.AppendLine("}");
             // ----
         }

@@ -225,20 +225,18 @@ that can be used as follows:
 // Prepare a CancellationToken
 const ct = new CancellationToken();
 
-// Invoke .NET method asynchronously:
-const promise =
-    dupeNukem.viewModels.mainWindowViewModel.
-    longAwaitedMethod(1, 2, ct);
-
-// (attempt to cancel asynchronous processing if necessary)
-ct.cancel();
+// Setup canceler:
+document.getElementById("cancelButton").onclick =
+    () => ct.cancel();
 
 try {
-    // Get result (exception thrown if cancellation propagated)
-    const result = await promise;
+    // Invoke .NET method asynchronously:
+    const resut = await
+        dupeNukem.viewModels.mainWindowViewModel.
+        longAwaitedMethod(1, 2, ct);
 }
 catch (e) {
-    // ...
+    // An exception is thrown when a cancellation occurs.
 }
 ```
 

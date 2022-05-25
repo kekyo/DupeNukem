@@ -427,6 +427,8 @@ Apache-v2.
 
 ## History
 
+* 0.12.0:
+  * Unhooked any events on calling Dispose method. (avoid memory leaks)
 * 0.11.0:
   * Help debugging by warning log and raise exception at JavaScript when , .NET method is marked with `Obsolete` attribute.
   * Fixed registering implicit proxy methods at around browser reloading. 

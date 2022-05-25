@@ -131,6 +131,10 @@ namespace DupeNukem
         {
             this.timeoutTimer.Dispose();
             this.CancelAllSuspending();
+
+            this.SendRequest = null;
+            this.Ready = null;
+            this.ErrorDetected = null;
         }
 
         [EditorBrowsable(EditorBrowsableState.Advanced)]

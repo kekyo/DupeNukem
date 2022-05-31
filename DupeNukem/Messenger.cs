@@ -17,6 +17,7 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -283,7 +284,7 @@ namespace DupeNukem
             }
             else
             {
-                throw new InvalidOperationException("DupeNukem: SendRequest doesn't hook.");
+                Trace.WriteLine("DupeNukem: SendRequest doesn't hook.");
             }
         }
 

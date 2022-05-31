@@ -427,6 +427,8 @@ Apache-v2.
 
 ## History
 
+* 0.13.0:
+  * Changed showing trace message instead raise exception when SendRequest aren't hooked.
 * 0.12.0:
   * Unhooked any events on calling Dispose method. (avoid memory leaks)
 * 0.11.0:

@@ -427,6 +427,8 @@ Apache-v2.
 
 ## History
 
+* 0.14.0:
+  * Fixed causing duplicated key exception when derived class has same named overrided expose method.
 * 0.13.0:
   * Changed showing trace message instead raise exception when SendRequest aren't hooked.
 * 0.12.0:

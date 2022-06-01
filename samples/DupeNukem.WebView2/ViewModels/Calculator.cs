@@ -15,17 +15,31 @@ using System.Threading.Tasks;
 
 namespace DupeNukem.ViewModels
 {
-    internal sealed class Calculator
+    internal abstract class CalculatorBase1
     {
         [JavaScriptTarget]
-        public async Task<int> add(int a, int b)
+        public Task<int> add(int a, int b) =>
+            throw new NotImplementedException("BUG: Fake add is called.");
+
+        [JavaScriptTarget("sub")]
+        public Task<int> __sub__123(int a, int b) =>
+            throw new NotImplementedException("BUG: Fake sub is called.");
+    }
+
+    internal abstract class CalculatorBase2 : CalculatorBase1
+    {
+        [JavaScriptTarget]
+        public new async Task<int> add(int a, int b)
         {
             await Task.Delay(100);
             return a + b;
         }
+    }
 
+    internal sealed class Calculator : CalculatorBase2
+    {
         [JavaScriptTarget("sub")]
-        public async Task<int> __sub__123(int a, int b)
+        public new async Task<int> __sub__123(int a, int b)
         {
             await Task.Delay(100);
             return a - b;

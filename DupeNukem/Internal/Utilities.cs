@@ -102,10 +102,12 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static string GetFullName(MethodInfo method)
+        public static string GetFullName(MethodInfo method, Type? runtimeType)
         {
-            var tn = method.DeclaringType is { } dt ?
-                GetFullName(dt) : "global";
+            var tn = (runtimeType != null) ?
+                GetFullName(runtimeType) :
+                method.DeclaringType is { } dt ?
+                    GetFullName(dt) : "global";
             var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 method.Name.Substring(0, index) : method.Name;
             if (method.IsGenericMethod)
@@ -121,7 +123,7 @@ namespace DupeNukem.Internal
         }
 
         public static string GetMethodFullName(Delegate dlg) =>
-            GetFullName(dlg.Method);
+            GetFullName(dlg.Method, dlg.Target?.GetType());
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -137,17 +139,21 @@ namespace DupeNukem.Internal
                 Select(element => ns.GetPropertyName(element, hasSpecifiedName)));
 
         private static string GetMethodName(
-            MethodInfo method, string? specifiedName, bool isFullName, NamingStrategy ns)
+            MethodInfo method, Type? runtimeType, string? specifiedName, bool isFullName, NamingStrategy ns)
         {
             if (IsNullOrWhiteSpace(specifiedName))
             {
-                var methodName = isFullName ? GetFullName(method) : GetName(method);
+                var methodName = isFullName ?
+                    GetFullName(method, runtimeType) :
+                    GetName(method);
                 return ns.GetConvertedName(methodName);
             }
             else
             {
-                var scopeName = method.DeclaringType is { } dt ?
-                    ns.GetConvertedName(GetFullName(dt)) : "global";
+                var scopeName = (runtimeType != null) ?
+                    ns.GetConvertedName(GetFullName(runtimeType)) :
+                    method.DeclaringType is { } dt ?
+                        ns.GetConvertedName(GetFullName(dt)) : "global";
                 return isFullName ? $"{scopeName}.{specifiedName}" : specifiedName!;
             }
         }
@@ -157,14 +163,15 @@ namespace DupeNukem.Internal
             target.GetType().
                 Traverse(t => t.BaseType).
                 SelectMany(t => new[] { t }.Concat(t.GetInterfaces())).
+                Distinct().   // Exclude overriding interface types.
                 SelectMany(t => t.GetMethods(
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)).
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)).
                 Select(method => new MethodEntry
                 {
                     Method = method,
                     MethodName = method.GetCustomAttributes(typeof(JavaScriptTargetAttribute), true) is object[] cas &&
                         cas.Length >= 1 && cas[0] is JavaScriptTargetAttribute a ?
-                            GetMethodName(method, a.Name, isFullName, memberAccessNamingStrategy) :
+                            GetMethodName(method, target.GetType(), a.Name, isFullName, memberAccessNamingStrategy) :
                             null!,
                 }).
                 Where(entry => entry.MethodName != null);
@@ -286,6 +293,27 @@ namespace DupeNukem.Internal
 #else
             Timeout.InfiniteTimeSpan;
 #endif
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public sealed class DelegatedEqualityComparer<T> : IEqualityComparer<T>
+        {
+            private readonly Func<T, int> getHashCode;
+            private readonly Func<T, T, bool> equals;
+
+            public DelegatedEqualityComparer(
+                Func<T, int> getHashCode, Func<T, T, bool> equals)
+            {
+                this.getHashCode = getHashCode;
+                this.equals = equals;
+            }
+
+            public int GetHashCode(T? obj) =>
+                this.getHashCode(obj!);
+
+            public bool Equals(T? x, T? y) =>
+                this.equals(x!, y!);
+        }
 
         ///////////////////////////////////////////////////////////////////////////////
 

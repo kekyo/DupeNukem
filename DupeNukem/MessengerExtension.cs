@@ -205,7 +205,10 @@ namespace DupeNukem
                 MethodName = scopeName != null ?
                     $"{scopeName}.{entry.MethodName}" :
                     entry.MethodName
-            });
+            }).
+            Distinct(new Utilities.DelegatedEqualityComparer<Utilities.MethodEntry>(
+                me => me.MethodName.GetHashCode(),
+                (l, r) => l.MethodName.Equals(r.MethodName)));
 
         internal static string[] RegisterObject(
             this Messenger messenger, string? scopeName, object target, bool injectProxy) =>

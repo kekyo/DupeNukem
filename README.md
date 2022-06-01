@@ -377,12 +377,7 @@ formsWebView.AddLocalCallback(
 // Step 4: Injected Messenger script.
 var script = messenger.GetInjectionScript();
 formsWebView.OnNavigationCompleted += (s, url) =>
-{
-    if (url == formsWebView.Source)
-    {
-        formsWebView.InjectJavascriptAsync(script.ToString());
-    }
-};
+    formsWebView.InjectJavascriptAsync(script.ToString());
 ```
 
 ### Celenium WebDriver on .NET

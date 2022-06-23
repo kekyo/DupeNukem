@@ -422,6 +422,8 @@ Apache-v2.
 
 ## History
 
+* 0.15.0:
+  * Upgraded `Newtonsoft.Json` to 13.0.1 (See [Vulnerability: Improper Handling of Exceptional Conditions in Newtonsoft.Json - GitHub Advisory Database](https://github.com/advisories/GHSA-5crp-9r3c-p9vr))
 * 0.14.0:
   * Fixed causing duplicated key exception when derived class has same named overrided expose method.
 * 0.13.0:

@@ -105,5 +105,17 @@ namespace DupeNukem
                 this.DeleteFunctionProxy(name);
             }
         }
+
+        protected override void OnReady()
+        {
+            // Inject JavaScript proxies.
+            foreach (var kv in this.GetRegisteredMethodPairs())
+            {
+                if (kv.Value.Metadata.IsProxyInjecting)
+                {
+                    this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
+                }
+            }
+        }
     }
 }

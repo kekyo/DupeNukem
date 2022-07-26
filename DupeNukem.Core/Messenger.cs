@@ -85,6 +85,9 @@ namespace DupeNukem
         protected internal readonly JsonSerializer Serializer;
         protected internal readonly NamingStrategy MemberAccessNamingStrategy;
 
+        protected IEnumerable<KeyValuePair<string, MethodDescriptor>> GetRegisteredMethodPairs() =>
+            this.methods;
+
         ///////////////////////////////////////////////////////////////////////////////
 
         public static JsonSerializer GetDefaultJsonSerializer()
@@ -307,6 +310,10 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
+        protected virtual void OnReady()
+        {
+        }
+
         private void SendExceptionToClient(Message message, ExceptionBody responseBody)
         {
             var response = new Message(
@@ -334,6 +341,8 @@ namespace DupeNukem
                             this.CancelAllSuspending();
 
                             await this.synchContext.Bind();
+
+                            this.OnReady();
 
                             // Invoke ready event.
                             this.Ready?.Invoke(this, EventArgs.Empty);

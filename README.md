@@ -433,6 +433,7 @@ Apache-v2.
 * 0.16.0:
   * Splitted core library into new `DupeNukem.Core` package, because need to be usable pure interoperation infrastructure. 
     * Please fix indicating at obsolete warnings `new WebViewMessenger` instead of `new Messenger(...)`.
+  * Fixed failing to notify caught exception on JavaScript side before promise context.
   * Changed sample Edge WebView2 gluing code.
 * 0.15.0:
   * Upgraded `Newtonsoft.Json` to 13.0.1 (See [Vulnerability: Improper Handling of Exceptional Conditions in Newtonsoft.Json - GitHub Advisory Database](https://github.com/advisories/GHSA-5crp-9r3c-p9vr))

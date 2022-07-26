@@ -54,7 +54,7 @@ namespace DupeNukem.ViewModels
                         messenger.ReceivedRequest(e.Message.ToString());
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript();
+                    var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     cefSharp.FrameLoadEnd += (s, e) =>
                     {

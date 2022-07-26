@@ -109,12 +109,12 @@ var __dupeNukem_Messenger__ =
                             else {
                                 f.apply(ti, message.body.args).
                                     then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
-                                    catch(e => window.__dupeNukem_Messenger_sendToHostMessage__(message, { name: e.name, message: e.message, detail: e.toString(), }));
+                                    catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }
                         }
                     }
                     catch (e) {
-                        window.__dupeNukem_Messenger_sendToHostMessage__(message, { name: e.name, message: e.message, detail: e.toString(), });
+                        this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), });
                     }
                     break;
                 case "control":

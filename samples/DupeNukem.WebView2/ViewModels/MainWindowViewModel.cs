@@ -63,7 +63,7 @@ namespace DupeNukem.ViewModels
                     };
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript();
+                    var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());

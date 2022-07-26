@@ -15,21 +15,21 @@ namespace DupeNukem.ViewModels
 {
     internal sealed class Calculator
     {
-        [JavaScriptTarget]
+        [CallableTarget]
         public async Task<int> add(int a, int b)
         {
             await Task.Delay(100);
             return a + b;
         }
 
-        [JavaScriptTarget("sub")]
+        [CallableTarget("sub")]
         public async Task<int> __sub__123(int a, int b)
         {
             await Task.Delay(100);
             return a - b;
         }
 
-        // [JavaScriptTarget]   // couldn't invoke from JavaScript.
+        // [CallableTarget]   // couldn't invoke from JavaScript.
         public async Task<int> mult(int a, int b)
         {
             await Task.Delay(100);

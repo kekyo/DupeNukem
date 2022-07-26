@@ -20,7 +20,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -68,12 +67,9 @@ namespace DupeNukem
 
         public SendRequestEventArgs(string jsonString) =>
             this.JsonString = jsonString;
-
-        public string ToJavaScript() =>
-            $"if (window.__dupeNukem_Messenger__ != undefined && window.__dupeNukem_Messenger__.arrivedHostMesssage__ != undefined) window.__dupeNukem_Messenger__.arrivedHostMesssage__('{this.JsonString.Replace("'", "\\'")}');";
     }
 
-    public sealed class Messenger : IDisposable
+    public class Messenger : IDisposable
     {
         private static readonly NamingStrategy defaultNamingStrategy =
             new CamelCaseNamingStrategy();
@@ -86,8 +82,8 @@ namespace DupeNukem
         private readonly Timer timeoutTimer;
         private volatile int id;
 
-        internal readonly JsonSerializer serializer;
-        internal readonly NamingStrategy memberAccessNamingStrategy;
+        protected internal readonly JsonSerializer Serializer;
+        protected internal readonly NamingStrategy MemberAccessNamingStrategy;
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -107,25 +103,27 @@ namespace DupeNukem
             return serializer;
         }
 
+        [Obsolete("Use instead of WebViewMessenger class")]
         public Messenger(TimeSpan? timeoutDuration = default) :
             this(GetDefaultJsonSerializer(), defaultNamingStrategy, timeoutDuration)
         {
         }
 
+        [Obsolete("Use instead of WebViewMessenger class")]
         public Messenger(
             JsonSerializer serializer,
             NamingStrategy memberAccessNamingStrategy,
             TimeSpan? timeoutDuration)
         {
-            this.serializer = serializer;
-            this.memberAccessNamingStrategy = memberAccessNamingStrategy;
+            this.Serializer = serializer;
+            this.MemberAccessNamingStrategy = memberAccessNamingStrategy;
             this.timeoutDuration = timeoutDuration ??
 #if DEBUG
                 new TimeSpan(0, 0, 0, 0, -1);
 #else
                 TimeSpan.FromSeconds(30);
 #endif
-            this.timeoutTimer = new Timer(this.ReachTimeout);
+            this.timeoutTimer = new Timer(this.ReachTimeout, null, 0, 0);
         }
 
         public void Dispose()
@@ -148,71 +146,31 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public string PostMessageSymbolName =>
-            "__dupeNukem_Messenger_sendToHostMessage__";
-
-        public StringBuilder GetInjectionScript(bool debugLog = false)
+        protected virtual void OnRegisterMethod(
+            string name, MethodDescriptor method, bool hasSpecifiedName)
         {
-            using var s = this.GetType().Assembly.
-                GetManifestResourceStream("DupeNukem.Script.js");
-            var tr = new StreamReader(s!, Encoding.UTF8);
-            var sb = new StringBuilder(tr.ReadToEnd());
-            if (debugLog)
-            {
-                sb.AppendLine("__dupeNukem_Messenger__.debugLog__ = true;");
-            }
-            return sb;
-        }
-
-        private void InjectFunctionProxy(string name, MethodMetadata metadata)
-        {
-            var obsolete = metadata.Obsolete;
-
-            var injectBody = new InjectBody(
-                name,
-                obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
-                obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
-            var request = new Message(
-                "inject",
-                MessageTypes.Control,
-                JToken.FromObject(injectBody, this.serializer));
-            var tw = new StringWriter();
-            this.serializer.Serialize(tw, request);
-            this.SendMessageToClient(tw.ToString());
-        }
-
-        private void DeleteFunctionProxy(string name)
-        {
-            var request = new Message(
-                "delete",
-                MessageTypes.Control,
-                JToken.FromObject(name, this.serializer));
-            var tw = new StringWriter();
-            this.serializer.Serialize(tw, request);
-            this.SendMessageToClient(tw.ToString());
         }
 
         internal string RegisterMethod(
             string name, MethodDescriptor method, bool hasSpecifiedName)
         {
-            var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
-            if (method.Metadata.IsProxyInjecting)
-            {
-                this.InjectFunctionProxy(n, method.Metadata);
-            }
+            var n = this.MemberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            this.OnRegisterMethod(n, method, hasSpecifiedName);
             this.methods.SafeAdd(n, method);
             return n;
         }
 
+        protected virtual void OnUnregisterMethod(
+            string name, MethodDescriptor method, bool hasSpecifiedName)
+        {
+        }
+
         internal void UnregisterMethod(string name, bool hasSpecifiedName)
         {
-            var n = this.memberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
+            var n = this.MemberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
             if (this.methods.TryGetValue(n, out var method))
             {
-                if (method.Metadata.IsProxyInjecting)
-                {
-                    this.DeleteFunctionProxy(n);
-                }
+                this.OnUnregisterMethod(n, method, hasSpecifiedName);
                 this.methods.SafeRemove(n);
             }
         }
@@ -274,7 +232,7 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        private async void SendMessageToClient(string jsonString)
+        protected async void SendMessageToClient(string jsonString)
         {
             if (this.SendRequest is { } sendRequest)
             {
@@ -314,13 +272,13 @@ namespace DupeNukem
 
             var body = new InvokeBody(
                 functionName,
-                args.Select(arg => arg != null ? JToken.FromObject(arg, this.serializer) : null).
+                args.Select(arg => arg != null ? JToken.FromObject(arg, this.Serializer) : null).
                 ToArray());
             var request = new Message(
-                id, MessageTypes.Invoke, JToken.FromObject(body, this.serializer));
+                id, MessageTypes.Invoke, JToken.FromObject(body, this.Serializer));
 
             var tw = new StringWriter();
-            this.serializer.Serialize(tw, request);
+            this.Serializer.Serialize(tw, request);
 
             this.SendMessageToClient(tw.ToString());
         }
@@ -352,10 +310,10 @@ namespace DupeNukem
         private void SendExceptionToClient(Message message, ExceptionBody responseBody)
         {
             var response = new Message(
-                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.serializer));
+                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.Serializer));
 
             var tw = new StringWriter();
-            this.serializer.Serialize(tw, response);
+            this.Serializer.Serialize(tw, response);
 
             this.SendMessageToClient(tw.ToString());
         }
@@ -365,7 +323,7 @@ namespace DupeNukem
             try
             {
                 var tr = new StringReader(jsonString);
-                var message = (Message)this.serializer.Deserialize(tr, typeof(Message))!;
+                var message = (Message)this.Serializer.Deserialize(tr, typeof(Message))!;
 
                 switch (message.Type)
                 {
@@ -374,15 +332,6 @@ namespace DupeNukem
                         {
                             // Exhausted page content, maybe all suspending tasks are zombies.
                             this.CancelAllSuspending();
-
-                            // Inject JavaScript proxies.
-                            foreach (var kv in this.methods)
-                            {
-                                if (kv.Value.Metadata.IsProxyInjecting)
-                                {
-                                    this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
-                                }
-                            }
 
                             await this.synchContext.Bind();
 
@@ -407,7 +356,7 @@ namespace DupeNukem
                         if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                         {
                             this.suspendings.SafeRemove(message.Id);
-                            var error = message.Body!.ToObject<ExceptionBody>(this.serializer);
+                            var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
                             try
                             {
                                 throw new JavaScriptException(error.Name, error.Message, error.Detail);
@@ -426,7 +375,7 @@ namespace DupeNukem
                     case MessageTypes.Invoke:
                         try
                         {
-                            var body = message.Body!.ToObject<InvokeBody>(this.serializer);
+                            var body = message.Body!.ToObject<InvokeBody>(this.Serializer);
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {
@@ -437,10 +386,10 @@ namespace DupeNukem
 
                                 var response = new Message(
                                     message.Id, MessageTypes.Succeeded,
-                                    (result != null) ? JToken.FromObject(result, this.serializer) : null);
+                                    (result != null) ? JToken.FromObject(result, this.Serializer) : null);
 
                                 var tw = new StringWriter();
-                                this.serializer.Serialize(tw, response);
+                                this.Serializer.Serialize(tw, response);
 
                                 this.SendMessageToClient(tw.ToString());
                             }

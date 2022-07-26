@@ -29,7 +29,11 @@ namespace DupeNukem.Internal
             }
             else
             {
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+                var returnType = taskType.GenericTypeArguments[0]!;
+#else
                 var returnType = taskType.GetGenericArguments()[0]!;
+#endif
                 TaskResultGetter getter;
                 lock (getters)
                 {

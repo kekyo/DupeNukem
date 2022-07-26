@@ -56,6 +56,19 @@ namespace DupeNukem.Internal
         {
             var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 type.Name.Substring(0, index) : type.Name;
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            var ti = type.GetTypeInfo();
+            if (ti.IsGenericType)
+            {
+                var gtns = Join(
+                    ",", ti.GenericTypeArguments.Select(GetName));
+                return $"{tn}<{gtns}>";
+            }
+            else
+            {
+                return $"{tn}";
+            }
+#else
             if (type.IsGenericType)
             {
                 var gtns = Join(
@@ -66,6 +79,7 @@ namespace DupeNukem.Internal
             {
                 return $"{tn}";
             }
+#endif
         }
 
         public static string GetFullName(Type type)
@@ -74,6 +88,19 @@ namespace DupeNukem.Internal
                 GetFullName(dt) : type.Namespace;
             var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 type.Name.Substring(0, index) : type.Name;
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            var ti = type.GetTypeInfo();
+            if (ti.IsGenericType)
+            {
+                var gtns = Join(
+                    ",", ti.GenericTypeArguments.Select(GetFullName));
+                return $"{ns}.{tn}<{gtns}>";
+            }
+            else
+            {
+                return $"{ns}.{tn}";
+            }
+#else
             if (type.IsGenericType)
             {
                 var gtns = Join(
@@ -84,6 +111,7 @@ namespace DupeNukem.Internal
             {
                 return $"{ns}.{tn}";
             }
+#endif
         }
 
         public static string GetName(MethodInfo method)
@@ -123,7 +151,11 @@ namespace DupeNukem.Internal
         }
 
         public static string GetMethodFullName(Delegate dlg) =>
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            GetFullName(dlg.GetMethodInfo(), dlg.Target?.GetType());
+#else
             GetFullName(dlg.Method, dlg.Target?.GetType());
+#endif
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -161,16 +193,25 @@ namespace DupeNukem.Internal
         public static IEnumerable<MethodEntry> EnumerateTargetMethods(
             object target, bool isFullName, NamingStrategy memberAccessNamingStrategy) =>
             target.GetType().
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+                GetTypeInfo().
+                Traverse(t => t.BaseType.GetTypeInfo()).
+                SelectMany(t => new[] { t }.Concat(t.ImplementedInterfaces.Select(t => t.GetTypeInfo()))).
+                Distinct().   // Exclude overriding interface types.
+                SelectMany(t => t.DeclaredMethods).
+                Where(m => !m.IsStatic).
+#else
                 Traverse(t => t.BaseType).
                 SelectMany(t => new[] { t }.Concat(t.GetInterfaces())).
                 Distinct().   // Exclude overriding interface types.
                 SelectMany(t => t.GetMethods(
                     BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)).
+#endif
                 Select(method => new MethodEntry
                 {
                     Method = method,
-                    MethodName = method.GetCustomAttributes(typeof(JavaScriptTargetAttribute), true) is object[] cas &&
-                        cas.Length >= 1 && cas[0] is JavaScriptTargetAttribute a ?
+                    MethodName = method.GetCustomAttributes(typeof(CallableTargetAttribute), true) is object[] cas &&
+                        cas.Length >= 1 && cas[0] is CallableTargetAttribute a ?
                             GetMethodName(method, target.GetType(), a.Name, isFullName, memberAccessNamingStrategy) :
                             null!,
                 }).
@@ -224,7 +265,7 @@ namespace DupeNukem.Internal
         public static Task CompletedTask =>
 #if NET35 || NET40
             TaskEx.FromResult(0);
-#elif NET45
+#elif NET45 || NET451 || NET452 || NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
             Task.FromResult(0);
 #else
             Task.CompletedTask;

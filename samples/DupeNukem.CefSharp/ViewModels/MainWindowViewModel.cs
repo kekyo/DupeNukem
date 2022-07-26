@@ -32,7 +32,7 @@ namespace DupeNukem.ViewModels
         public MainWindowViewModel()
         {
             // Step 1: Construct DupeNukem Messenger.
-            var messenger = new Messenger();
+            var messenger = new WebViewMessenger();
             this.HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 

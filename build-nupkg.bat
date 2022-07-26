@@ -14,6 +14,6 @@ echo.
 
 rem git clean -xfd
 
-dotnet restore
-dotnet build -p:Configuration=Release -p:Platform=AnyCPU DupeNukem\DupeNukem.csproj
-dotnet pack -p:Configuration=Release -p:Platform=AnyCPU -o artifacts DupeNukem\DupeNukem.csproj
+dotnet build -p:Configuration=Release DupeNukem\DupeNukem.csproj
+dotnet pack -p:Configuration=Release -o artifacts DupeNukem.Core\DupeNukem.Core.csproj
+dotnet pack -p:Configuration=Release -o artifacts DupeNukem\DupeNukem.csproj

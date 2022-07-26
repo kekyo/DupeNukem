@@ -13,11 +13,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.ComponentModel;
 
 namespace DupeNukem.Internal
 {
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
     [JsonConverter(typeof(StringEnumConverter), typeof(CamelCaseNamingStrategy))]
-    internal enum MessageTypes
+    public enum MessageTypes
     {
         Control,
         Succeeded,
@@ -25,7 +27,8 @@ namespace DupeNukem.Internal
         Invoke,
     }
 
-    internal readonly struct Message
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public readonly struct Message
     {
         [JsonProperty("id")]
         public readonly string Id;
@@ -40,24 +43,6 @@ namespace DupeNukem.Internal
             this.Id = id;
             this.Type = type;
             this.Body = body;
-        }
-    }
-
-    internal readonly struct InjectBody
-    {
-        [JsonProperty("name")]
-        public readonly string Name;
-        [JsonProperty("obsolete", NullValueHandling = NullValueHandling.Ignore)]
-        public readonly string? Obsolete;
-        [JsonProperty("obsoleteMessage", NullValueHandling = NullValueHandling.Ignore)]
-        public readonly string? ObsoleteMessage;
-
-        [JsonConstructor]
-        public InjectBody(string name, string? obsolete, string? obsoleteMessage)
-        {
-            this.Name = name;
-            this.Obsolete = obsolete;
-            this.ObsoleteMessage = obsoleteMessage;
         }
     }
 

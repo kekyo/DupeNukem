@@ -32,7 +32,7 @@ namespace DupeNukem.ViewModels
         public MainWindowViewModel()
         {
             // Step 1: Construct DupeNukem Messenger.
-            var messenger = new Messenger();
+            var messenger = new WebViewMessenger();
             this.HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 
@@ -54,7 +54,7 @@ namespace DupeNukem.ViewModels
                         messenger.ReceivedRequest(e.Message.ToString());
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript();
+                    var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     cefSharp.FrameLoadEnd += (s, e) =>
                     {

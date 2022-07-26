@@ -12,6 +12,7 @@
 using Epoxy;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -30,7 +31,7 @@ namespace DupeNukem.ViewModels
         public MainWindowViewModel()
         {
             // Step 1: Construct DupeNukem Messenger.
-            var messenger = new Messenger();
+            var messenger = new WebViewMessenger();
             this.HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 
@@ -50,11 +51,19 @@ namespace DupeNukem.ViewModels
                         webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
 
                     // Step 3: Attached JavaScript --> .NET message handler.
+                    var serializer = Messenger.GetDefaultJsonSerializer();
                     webView2.CoreWebView2.WebMessageReceived += (s, e) =>
-                        messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+                    {
+                        if (serializer.Deserialize(
+                            new StringReader(e.WebMessageAsJson),
+                            typeof(object))?.ToString() is { } m)
+                        {
+                            messenger.ReceivedRequest(m);
+                        }
+                    };
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript();
+                    var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                         script.ToString());

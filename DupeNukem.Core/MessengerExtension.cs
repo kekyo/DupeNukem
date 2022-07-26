@@ -156,31 +156,37 @@ namespace DupeNukem
                 method.GetCustomAttributes(typeof(ObsoleteAttribute), true) is ObsoleteAttribute[] oas ?
                     oas.FirstOrDefault() :
                     null);
+        private static MethodMetadata GetMetadata(bool isProxyInjecting, Delegate dlg) =>
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            GetMetadata(isProxyInjecting, dlg.GetMethodInfo());
+#else
+            GetMetadata(isProxyInjecting, dlg.Method);
+#endif
 
         public static string RegisterDynamicMethod(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
-                new DynamicMethodDescriptor(method, GetMetadata(true, method.Method), messenger),
+                new DynamicMethodDescriptor(method, GetMetadata(true, method), messenger),
                 false);
         public static string RegisterDynamicMethod<TR>(
             this Messenger messenger, Delegate method) =>
             messenger.RegisterMethod(
                 Utilities.GetMethodFullName(method),
-                new DynamicMethodDescriptor<TR>(method, GetMetadata(true, method.Method), messenger),
+                new DynamicMethodDescriptor<TR>(method, GetMetadata(true, method), messenger),
                 false);
 
         public static void RegisterDynamicMethod(
             this Messenger messenger, string name, Delegate method) =>
             messenger.RegisterMethod(
                 name,
-                new DynamicMethodDescriptor(method, GetMetadata(true, method.Method), messenger),
+                new DynamicMethodDescriptor(method, GetMetadata(true, method), messenger),
                 true);
         public static void RegisterDynamicMethod<TR>(
             this Messenger messenger, string name, Delegate method) =>
             messenger.RegisterMethod(
                 name,
-                new DynamicMethodDescriptor<TR>(method, GetMetadata(true, method.Method), messenger),
+                new DynamicMethodDescriptor<TR>(method, GetMetadata(true, method), messenger),
                 true);
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -198,7 +204,7 @@ namespace DupeNukem
         private static IEnumerable<Utilities.MethodEntry> EnumerateRegisterObjectMethods(
             Messenger messenger, string? scopeName, object target, bool isFullName) =>
             Utilities.EnumerateTargetMethods(
-                target, isFullName, messenger.memberAccessNamingStrategy).
+                target, isFullName, messenger.MemberAccessNamingStrategy).
             Select(entry => new Utilities.MethodEntry
             {
                 Method = entry.Method,

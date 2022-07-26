@@ -13,16 +13,17 @@ using System;
 
 namespace DupeNukem
 {
+    [Obsolete("JavaScriptTargetAttribute will be remove in future release. Use instead of CallableTargetAttribute")]
     [AttributeUsage(AttributeTargets.Method)]
-    public sealed class JavaScriptTargetAttribute : Attribute
+    public sealed class JavaScriptTargetAttribute : CallableTargetAttribute
     {
-        public readonly string? Name;
-
         public JavaScriptTargetAttribute()
         {
         }
 
-        public JavaScriptTargetAttribute(string name) =>
-            this.Name = name;
+        public JavaScriptTargetAttribute(string name) :
+            base(name)
+        {
+        }
     }
 }

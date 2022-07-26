@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -20,23 +21,25 @@ using Newtonsoft.Json.Linq;
 
 namespace DupeNukem.Internal
 {
-    internal sealed class MethodMetadata
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public sealed class MethodMetadata
     {
         public readonly bool IsProxyInjecting;
         public readonly ObsoleteAttribute? Obsolete;
 
-        public MethodMetadata(bool isProxyInjecting, ObsoleteAttribute? obsolete)
+        internal MethodMetadata(bool isProxyInjecting, ObsoleteAttribute? obsolete)
         {
             this.IsProxyInjecting = isProxyInjecting;
             this.Obsolete = obsolete;
         }
     }
 
-    internal abstract class MethodDescriptor
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public abstract class MethodDescriptor
     {
         private readonly Messenger messenger;
 
-        protected MethodDescriptor(Messenger messenger, MethodMetadata metadata)
+        private protected MethodDescriptor(Messenger messenger, MethodMetadata metadata)
         {
             this.messenger = messenger;
             this.Metadata = metadata;
@@ -47,9 +50,9 @@ namespace DupeNukem.Internal
         public abstract Task<object?> InvokeAsync(JToken?[] args);
 
         protected T ToObject<T>(JToken? arg) =>
-            (arg != null) ? arg.ToObject<T>(this.messenger.serializer)! : default(T)!;
+            (arg != null) ? arg.ToObject<T>(this.messenger.Serializer)! : default(T)!;
         protected object? ToObject(JToken? arg, Type type) =>
-            (arg != null) ? arg.ToObject(type, this.messenger.serializer) : Utilities.GetDefaultValue(type);
+            (arg != null) ? arg.ToObject(type, this.messenger.Serializer) : Utilities.GetDefaultValue(type);
 
         protected void BeginCapturingArguments() =>
             DeserializingRegisteredObjectRegistry.Begin();
@@ -57,7 +60,7 @@ namespace DupeNukem.Internal
         protected IDisposable FinishCapturingArguments()
         {
             // Enumerate the custom instances that have occurred since the call to BeginCapturingArguments(),
-            // register them as temporary instances, and make them available for reference from the JavaScript side.
+            // register them as temporary instances, and make them available for reference from the other side.
             // And the registration is released when call to Disposer.Dispose().
             var objects = DeserializingRegisteredObjectRegistry.Finish();
             foreach (var entry in objects)
@@ -348,7 +351,12 @@ namespace DupeNukem.Internal
             base(messenger, metadata)
         {
             this.method = method;
-            this.parameterTypes = this.method.Method.
+            this.parameterTypes =
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+                this.method.GetMethodInfo().
+#else
+                this.method.Method.
+#endif
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();
@@ -378,7 +386,12 @@ namespace DupeNukem.Internal
             base(messenger, metadata)
         {
             this.method = method;
-            this.parameterTypes = this.method.Method.
+            this.parameterTypes =
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+                this.method.GetMethodInfo().
+#else
+                this.method.Method.
+#endif
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();

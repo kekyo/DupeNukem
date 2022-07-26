@@ -17,18 +17,18 @@ namespace DupeNukem.ViewModels
 {
     internal abstract class CalculatorBase1
     {
-        [JavaScriptTarget]
+        [CallableTarget]
         public Task<int> add(int a, int b) =>
             throw new NotImplementedException("BUG: Fake add is called.");
 
-        [JavaScriptTarget("sub")]
+        [CallableTarget("sub")]
         public Task<int> __sub__123(int a, int b) =>
             throw new NotImplementedException("BUG: Fake sub is called.");
     }
 
     internal abstract class CalculatorBase2 : CalculatorBase1
     {
-        [JavaScriptTarget]
+        [CallableTarget]
         public new async Task<int> add(int a, int b)
         {
             await Task.Delay(100);
@@ -38,28 +38,28 @@ namespace DupeNukem.ViewModels
 
     internal sealed class Calculator : CalculatorBase2
     {
-        [JavaScriptTarget("sub")]
+        [CallableTarget("sub")]
         public new async Task<int> __sub__123(int a, int b)
         {
             await Task.Delay(100);
             return a - b;
         }
 
-        // [JavaScriptTarget]   // couldn't invoke from JavaScript.
+        // [CallableTarget]   // couldn't invoke from JavaScript.
         public async Task<int> mult(int a, int b)
         {
             await Task.Delay(100);
             return a * b;
         }
 
-        [JavaScriptTarget]
+        [CallableTarget]
         public async Task<int> add_cancellable(int a, int b, CancellationToken token)
         {
             await Task.Delay(2000, token);
             return a + b;
         }
 
-        [JavaScriptTarget]
+        [CallableTarget]
         [Obsolete]
         public async Task<int> add_obsoleted1(int a, int b)
         {
@@ -67,7 +67,7 @@ namespace DupeNukem.ViewModels
             return a + b;
         }
 
-        [JavaScriptTarget]
+        [CallableTarget]
         [Obsolete("Obsoleted test")]
         public async Task<int> add_obsoleted2(int a, int b)
         {
@@ -75,7 +75,7 @@ namespace DupeNukem.ViewModels
             return a + b;
         }
 
-        [JavaScriptTarget]
+        [CallableTarget]
         [Obsolete("Obsoleted test", true)]
         public async Task<int> add_obsoleted3(int a, int b)
         {

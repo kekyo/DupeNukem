@@ -83,7 +83,7 @@ Here is an example using:
 
 ## Setup sequence
 
-Setup sequence is gluing between `WebView` and DupeNukem `Messenger`.
+Setup sequence is gluing between `WebView` and DupeNukem `WebViewMessenger`.
 DupeNukem uses only "strings" to exchange messages.
 In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set up to mutually exchange message strings.
 
@@ -92,11 +92,11 @@ See [Gluing browsers](#gluing-browsers) section below.)
 
 ```csharp
 // Startup sequence.
-// Bound between WebView2 and DupeNukem Messenger.
+// Bound between WebView2 and DupeNukem WebViewMessenger.
 
-// Step 1: Construct DupeNukem Messenger.
+// Step 1: Construct DupeNukem WebViewMessenger.
 // Default timeout duration is 30sec.
-var messenger = new Messenger();
+var messenger = new WebViewMessenger();
 
 //////////////////////////////////////////
 
@@ -319,8 +319,16 @@ messenger.SendRequest += (s, e) =>
     webView2.CoreWebView2.PostWebMessageAsString(e.Message);
 
 // Step 3: Hook up JavaScript --> .NET message handler.
+var serializer = Messenger.GetDefaultJsonSerializer();
 webView2.CoreWebView2.WebMessageReceived += (s, e) =>
-    messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+{
+    if (serializer.Deserialize(
+        new StringReader(e.WebMessageAsJson),
+        typeof(object))?.ToString() is { } m)
+    {
+        messenger.ReceivedRequest(m);
+    }
+};
 
 // Step 4: Injected Messenger script.
 await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
@@ -422,6 +430,11 @@ Apache-v2.
 
 ## History
 
+* 0.16.0:
+  * Splitted core library into new `DupeNukem.Core` package, because need to be usable pure interoperation infrastructure. 
+    * Please fix indicating at obsolete warnings `new WebViewMessenger` instead of `new Messenger(...)`.
+  * Fixed failing to notify caught exception on JavaScript side before promise context.
+  * Changed sample Edge WebView2 gluing code.
 * 0.15.0:
   * Upgraded `Newtonsoft.Json` to 13.0.1 (See [Vulnerability: Improper Handling of Exceptional Conditions in Newtonsoft.Json - GitHub Advisory Database](https://github.com/advisories/GHSA-5crp-9r3c-p9vr))
 * 0.14.0:

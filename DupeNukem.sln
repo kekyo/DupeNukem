@@ -25,9 +25,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DupeNukem.Xamarin.Forms.And
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DupeNukem.Xamarin.Forms.iOS", "samples\DupeNukem.Xamarin.Forms\DupeNukem.Xamarin.Forms.iOS\DupeNukem.Xamarin.Forms.iOS.csproj", "{B0D59581-806A-4CAF-B98D-879049B0DD77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DupeNukem.Xamarin.Forms", "samples\DupeNukem.Xamarin.Forms\DupeNukem.Xamarin.Forms\DupeNukem.Xamarin.Forms.csproj", "{A7884725-62B0-4C0F-BD34-B73156625FCE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DupeNukem.Xamarin.Forms", "samples\DupeNukem.Xamarin.Forms\DupeNukem.Xamarin.Forms\DupeNukem.Xamarin.Forms.csproj", "{A7884725-62B0-4C0F-BD34-B73156625FCE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DupeNukem.Xamarin.Forms", "DupeNukem.Xamarin.Forms", "{CD1638B3-B16D-498C-920D-CB4E128BCD25}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DupeNukem.Core", "DupeNukem.Core\DupeNukem.Core.csproj", "{998F0B7A-6665-42DB-8CCC-127266E066BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -117,6 +119,18 @@ Global
 		{A7884725-62B0-4C0F-BD34-B73156625FCE}.Release|iPhone.Build.0 = Release|Any CPU
 		{A7884725-62B0-4C0F-BD34-B73156625FCE}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
 		{A7884725-62B0-4C0F-BD34-B73156625FCE}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|iPhone.ActiveCfg = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|iPhone.Build.0 = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|iPhoneSimulator.ActiveCfg = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Debug|iPhoneSimulator.Build.0 = Debug|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|iPhone.ActiveCfg = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|iPhone.Build.0 = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|iPhoneSimulator.ActiveCfg = Release|Any CPU
+		{998F0B7A-6665-42DB-8CCC-127266E066BB}.Release|iPhoneSimulator.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

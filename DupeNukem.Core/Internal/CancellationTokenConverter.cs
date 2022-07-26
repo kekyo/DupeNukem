@@ -31,7 +31,7 @@ namespace DupeNukem.Internal
             public CancellationToken Token =>
                 this.cts.Token;
 
-            [JavaScriptTarget("cancel")]
+            [CallableTarget("cancel")]
             public Task CancelAsync()
             {
                 this.cts.Cancel();

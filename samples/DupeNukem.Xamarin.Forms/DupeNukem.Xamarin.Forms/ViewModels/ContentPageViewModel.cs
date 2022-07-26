@@ -33,7 +33,7 @@ namespace DupeNukem.ViewModels
         public ContentPageViewModel()
         {
             // Step 1: Construct DupeNukem Messenger.
-            var messenger = new Messenger();
+            var messenger = new WebViewMessenger();
             this.HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 
@@ -55,7 +55,7 @@ namespace DupeNukem.ViewModels
                         messenger.ReceivedRequest);
 
                     // Step 4: Injected Messenger script.
-                    var script = messenger.GetInjectionScript();
+                    var script = messenger.GetInjectionScript(true);
                     this.AddJavaScriptTestCode(script);   // FOR TEST
                     formsWebView.OnNavigationCompleted += (s, url) =>
                     {

@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CefSharp.Wpf" Version="100.0.140" />
+    <PackageReference Include="CefSharp.Wpf" Version="103.0.120" />
   </ItemGroup>
 
   <ItemGroup>

@@ -11,7 +11,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
     <PackageReference Include="Epoxy.Wpf" Version="1.7.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1108.44" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1264.42" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
   <ItemGroup>

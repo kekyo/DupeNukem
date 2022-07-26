@@ -11,6 +11,7 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 |Package|NuGet|
 |:--|:--|
 |DupeNukem|[![NuGet DupeNukem](https://img.shields.io/nuget/v/DupeNukem.svg?style=flat)](https://www.nuget.org/packages/DupeNukem)|
+|DupeNukem.Core|[![NuGet DupeNukem.Core](https://img.shields.io/nuget/v/DupeNukem.Core.svg?style=flat)](https://www.nuget.org/packages/DupeNukem.Core)|
 
 ## CI
 
@@ -92,7 +93,7 @@ See [Gluing browsers](#gluing-browsers) section below.)
 
 ```csharp
 // Startup sequence.
-// Bound between WebView2 and DupeNukem WebViewMessenger.
+// Bound between Edge WebView2 and DupeNukem WebViewMessenger.
 
 // Step 1: Construct DupeNukem WebViewMessenger.
 // Default timeout duration is 30sec.
@@ -105,8 +106,16 @@ messenger.SendRequest += (s, e) =>
     webView2.CoreWebView2.PostWebMessageAsString(e.Message);
 
 // Step 3: Hook up JavaScript --> .NET message handler.
+var serializer = Messenger.GetDefaultJsonSerializer();
 webView2.CoreWebView2.WebMessageReceived += (s, e) =>
-    messenger.ReceivedRequest(e.TryGetWebMessageAsString());
+{
+    if (serializer.Deserialize(
+        new StringReader(e.WebMessageAsJson),
+        typeof(object))?.ToString() is { } m)
+    {
+        messenger.ReceivedRequest(m);
+    }
+};
 
 // Step 4: Injected Messenger script.
 await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
@@ -123,16 +132,16 @@ Bulk register methods on an object:
 * All methods automatically inject proxy functions in JavaScript side.
 
 ```csharp
-// Apply `JavaScriptTarget` attribute on target callee method.
+// Apply `CallableTarget` attribute on target callee method.
 public class Calculator
 {
-    [JavaScriptTarget]
+    [CallableTarget]
     public Task<int> Add(int a, int b)
     {
         // ...
     }
 
-    [JavaScriptTarget("Subtract")]   // Strictly naming
+    [CallableTarget("Subtract")]   // Strictly naming
     public Task<int> __Sub__123(int a, int b)
     {
         // ...
@@ -243,7 +252,7 @@ catch (e) {
 .NET implementation:
 
 ```csharp
-[JavaScriptTarget("longAwaitedMethod")]
+[CallableTarget("longAwaitedMethod")]
 public async Task<int> LongAwaitedMethod(
     int a, int b, CancellationToken ct)
 {
@@ -431,8 +440,9 @@ Apache-v2.
 ## History
 
 * 0.16.0:
-  * Splitted core library into new `DupeNukem.Core` package, because need to be usable pure interoperation infrastructure. 
-    * Please fix indicating at obsolete warnings `new WebViewMessenger` instead of `new Messenger(...)`.
+  * Splitted core library into new `DupeNukem.Core` package, because need to be usable pure interoperation infrastructure. Please fix indicating at obsolete warnings:
+    * `new Messenger(...)` ==> `new WebViewMessenger(...)`
+    * `JavaScriptTargetAttribute` ==> `CallableTargetAttribute`
   * Fixed failing to notify caught exception on JavaScript side before promise context.
   * Changed sample Edge WebView2 gluing code.
 * 0.15.0:

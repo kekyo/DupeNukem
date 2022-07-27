@@ -442,6 +442,8 @@ Apache-v2.
 
 ## History
 
+* 0.17.1:
+  * Adjusted more signature and scope attributes.
 * 0.17.0:
   * Implemented `IMessenger` neutral interface. Please fix indicating at obsolete warnings:
     * `InvokeClientFunctionAsync(...)` ==> `InvokePeerMethodAsync(...)`

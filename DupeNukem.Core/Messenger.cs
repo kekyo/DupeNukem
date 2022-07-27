@@ -46,13 +46,12 @@ namespace DupeNukem
         private readonly Timer timeoutTimer;
         private volatile int id;
 
-        protected internal readonly NamingStrategy MemberAccessNamingStrategy;
-        protected internal readonly JsonSerializer Serializer;
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public NamingStrategy MemberAccessNamingStrategy { get; }
 
-        NamingStrategy IMessenger.MemberAccessNamingStrategy =>
-            this.MemberAccessNamingStrategy;
-        JsonSerializer IMessenger.Serializer =>
-            this.Serializer;
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public JsonSerializer Serializer { get; }
+
         protected IEnumerable<KeyValuePair<string, MethodDescriptor>> GetRegisteredMethodPairs() =>
             this.methods;
 

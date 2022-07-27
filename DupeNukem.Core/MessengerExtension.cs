@@ -278,21 +278,21 @@ namespace DupeNukem
         ///////////////////////////////////////////////////////////////////////////////
 
         public static Task InvokePeerMethodAsync(
-            this IMessenger messenger, string functionName, params object[] args) =>
+            this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync(default, functionName, args);
 
         public static Task<TR> InvokePeerMethodAsync<TR>(
-            this IMessenger messenger, string functionName, params object[] args) =>
+            this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync<TR>(default, functionName, args);
 
         [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
         public static Task InvokeClientFunctionAsync(
-            this IMessenger messenger, string functionName, params object[] args) =>
+            this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync(default, functionName, args);
 
         [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
         public static Task<TR> InvokeClientFunctionAsync<TR>(
-            this IMessenger messenger, string functionName, params object[] args) =>
+            this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync<TR>(default, functionName, args);
     }
 }

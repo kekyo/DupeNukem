@@ -442,6 +442,8 @@ Apache-v2.
 
 ## History
 
+* 0.17.2:
+  * Exposed control message interface on core library.
 * 0.17.1:
   * Adjusted more signature and scope attributes.
 * 0.17.0:

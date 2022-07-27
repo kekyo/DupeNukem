@@ -442,6 +442,10 @@ Apache-v2.
 
 ## History
 
+* 0.17.0:
+  * Implemented `IMessenger` neutral interface. Please fix indicating at obsolete warnings:
+    * `InvokeClientFunctionAsync(...)` ==> `InvokePeerMethodAsync(...)`
+  * Fixed some method signature type nullability.
 * 0.16.0:
   * Splitted core library into new `DupeNukem.Core` package, because need to be usable pure interoperation infrastructure. Please fix indicating at obsolete warnings:
     * `new Messenger(...)` ==> `new WebViewMessenger(...)`

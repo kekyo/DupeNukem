@@ -124,7 +124,7 @@ namespace DupeNukem.ViewModels
 
         /////////////////////////////////////////////////////////////////////////
 
-        private void HookWithMessengerTestCode(Messenger messenger)
+        private void HookWithMessengerTestCode(WebViewMessenger messenger)
         {
             // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>

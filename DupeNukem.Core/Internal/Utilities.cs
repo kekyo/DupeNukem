@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 
 namespace DupeNukem.Internal
 {
-    internal static class Utilities
+    public static class Utilities
     {
         private static readonly Dictionary<Type, object?> defaultValues = new();
 
@@ -36,7 +36,7 @@ namespace DupeNukem.Internal
                 default(T);
         }
 
-        public static object? GetDefaultValue(Type type)
+        internal static object? GetDefaultValue(Type type)
         {
             lock (defaultValues)
             {
@@ -52,7 +52,7 @@ namespace DupeNukem.Internal
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static string GetName(Type type)
+        internal static string GetName(Type type)
         {
             var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 type.Name.Substring(0, index) : type.Name;
@@ -82,7 +82,7 @@ namespace DupeNukem.Internal
 #endif
         }
 
-        public static string GetFullName(Type type)
+        internal static string GetFullName(Type type)
         {
             var ns = type.DeclaringType is { } dt ?
                 GetFullName(dt) : type.Namespace;
@@ -114,7 +114,7 @@ namespace DupeNukem.Internal
 #endif
         }
 
-        public static string GetName(MethodInfo method)
+        internal static string GetName(MethodInfo method)
         {
             var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 method.Name.Substring(0, index) : method.Name;
@@ -130,7 +130,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static string GetFullName(MethodInfo method, Type? runtimeType)
+        internal static string GetFullName(MethodInfo method, Type? runtimeType)
         {
             var tn = (runtimeType != null) ?
                 GetFullName(runtimeType) :
@@ -150,7 +150,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static string GetMethodFullName(Delegate dlg) =>
+        internal static string GetMethodFullName(Delegate dlg) =>
 #if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
             GetFullName(dlg.GetMethodInfo(), dlg.Target?.GetType());
 #else
@@ -159,13 +159,13 @@ namespace DupeNukem.Internal
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public struct MethodEntry
+        internal struct MethodEntry
         {
             public string MethodName;
             public MethodInfo Method;
         }
 
-        public static string GetConvertedName(
+        internal static string GetConvertedName(
             this NamingStrategy ns, string name, bool hasSpecifiedName = false) =>
             Join(".", name.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).
                 Select(element => ns.GetPropertyName(element, hasSpecifiedName)));
@@ -190,7 +190,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static IEnumerable<MethodEntry> EnumerateTargetMethods(
+        internal static IEnumerable<MethodEntry> EnumerateTargetMethods(
             object target, bool isFullName, NamingStrategy memberAccessNamingStrategy) =>
             target.GetType().
 #if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
@@ -219,7 +219,7 @@ namespace DupeNukem.Internal
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static bool SafeTryGetValue<TKey, TValue>(
+        internal static bool SafeTryGetValue<TKey, TValue>(
             this Dictionary<TKey, TValue> dict, TKey key, out TValue value)
             where TKey : notnull
         {
@@ -229,7 +229,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static void SafeAdd<TKey, TValue>(
+        internal static void SafeAdd<TKey, TValue>(
             this Dictionary<TKey, TValue> dict, TKey key, TValue value)
             where TKey : notnull
         {
@@ -239,7 +239,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static bool SafeRemove<TKey, TValue>(
+        internal static bool SafeRemove<TKey, TValue>(
             this Dictionary<TKey, TValue> dict, TKey key)
             where TKey : notnull
         {
@@ -249,7 +249,7 @@ namespace DupeNukem.Internal
             }
         }
 
-        public static IEnumerable<T> Traverse<T>(this T value, Func<T, T?> selector)
+        internal static IEnumerable<T> Traverse<T>(this T value, Func<T, T?> selector)
             where T : class
         {
             T? current = value;
@@ -262,7 +262,7 @@ namespace DupeNukem.Internal
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public static Task CompletedTask =>
+        internal static Task CompletedTask =>
 #if NET35 || NET40
             TaskEx.FromResult(0);
 #elif NET45 || NET451 || NET452 || NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
@@ -272,7 +272,7 @@ namespace DupeNukem.Internal
 #endif
 
 #if DEBUG
-        public static async Task WhenAll(IEnumerable<Task> tasks)
+        internal static async Task WhenAll(IEnumerable<Task> tasks)
         {
             foreach (var task in tasks)
             {
@@ -280,7 +280,7 @@ namespace DupeNukem.Internal
             }
         }
 #else
-        public static Task WhenAll(IEnumerable<Task> tasks) =>
+        internal static Task WhenAll(IEnumerable<Task> tasks) =>
 #if NET35 || NET40
             TaskEx.WhenAll(tasks);
 #else
@@ -289,7 +289,7 @@ namespace DupeNukem.Internal
 #endif
 
 #if DEBUG
-        public static async Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks)
+        internal static async Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
             var results = new List<T>();
             foreach (var task in tasks)
@@ -299,7 +299,7 @@ namespace DupeNukem.Internal
             return results.ToArray();
         }
 #else
-        public static Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks) =>
+        internal static Task<T[]> WhenAll<T>(IEnumerable<Task<T>> tasks) =>
 #if NET35 || NET40
             TaskEx.WhenAll(tasks);
 #else
@@ -307,28 +307,28 @@ namespace DupeNukem.Internal
 #endif
 #endif
 
-        public static Task Delay(int msec) =>
+        internal static Task Delay(int msec) =>
 #if NET35 || NET40
             TaskEx.Delay(msec);
 #else
             Task.Delay(msec);
 #endif
 
-        public static bool IsNullOrWhiteSpace(string? str) =>
+        internal static bool IsNullOrWhiteSpace(string? str) =>
 #if NET35
             string.IsNullOrEmpty(str) || str!.Trim().Length == 0;
 #else
             string.IsNullOrWhiteSpace(str);
 #endif
 
-        public static string Join<T>(string separator, IEnumerable<T> enumerable) =>
+        internal static string Join<T>(string separator, IEnumerable<T> enumerable) =>
 #if NET35
             string.Join(separator, enumerable.Select(v => v?.ToString() ?? string.Empty).ToArray());
 #else
             string.Join(separator, enumerable);
 #endif
 
-        public static readonly TimeSpan InfiniteTimeSpan =
+        internal static readonly TimeSpan InfiniteTimeSpan =
 #if NET35 || NET40
             new TimeSpan(0, 0, 0, 0, -1);
 #else
@@ -337,7 +337,7 @@ namespace DupeNukem.Internal
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public sealed class DelegatedEqualityComparer<T> : IEqualityComparer<T>
+        internal sealed class DelegatedEqualityComparer<T> : IEqualityComparer<T>
         {
             private readonly Func<T, int> getHashCode;
             private readonly Func<T, T, bool> equals;

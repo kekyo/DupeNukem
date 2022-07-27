@@ -38,7 +38,6 @@ namespace DupeNukem
         private static readonly NamingStrategy defaultNamingStrategy =
             new CamelCaseNamingStrategy();
 
-        private readonly SynchronizationContext? synchContext = SynchronizationContext.Current;
         private readonly Dictionary<string, MethodDescriptor> methods = new();
         private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
         private readonly Queue<WeakReference> timeoutQueue = new();
@@ -52,8 +51,16 @@ namespace DupeNukem
         [EditorBrowsable(EditorBrowsableState.Never)]
         public JsonSerializer Serializer { get; }
 
-        protected IEnumerable<KeyValuePair<string, MethodDescriptor>> GetRegisteredMethodPairs() =>
-            this.methods;
+        protected SynchronizationContext? SynchContext { get; } =
+            SynchronizationContext.Current;
+
+        protected KeyValuePair<string, MethodDescriptor>[] GetRegisteredMethodPairs()
+        {
+            lock (this.methods)
+            {
+                return this.methods.ToArray();
+            }
+        }
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -96,13 +103,12 @@ namespace DupeNukem
             this.timeoutTimer = new Timer(this.ReachTimeout, null, 0, 0);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             this.timeoutTimer.Dispose();
             this.CancelAllSuspending();
 
             this.SendRequest = null;
-            this.Ready = null;
             this.ErrorDetected = null;
         }
 
@@ -110,8 +116,6 @@ namespace DupeNukem
         public bool SendExceptionWithStackTrace { get; set; }
 
         public event EventHandler<SendRequestEventArgs>? SendRequest;
-
-        public event EventHandler? Ready;
         public event EventHandler? ErrorDetected;
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -160,7 +164,8 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        private void CancelAllSuspending()
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        protected void CancelAllSuspending()
         {
             lock (this.timeoutQueue)
             {
@@ -204,11 +209,11 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        protected async void SendMessageToClient(string jsonString)
+        private async void SendMessageToClient(string jsonString)
         {
             if (this.SendRequest is { } sendRequest)
             {
-                await this.synchContext.Bind();
+                await this.SynchContext.Bind();
 
                 sendRequest(this, new SendRequestEventArgs(jsonString));
             }
@@ -288,7 +293,22 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        protected virtual void OnReady()
+        protected void SendControlMessageToPeer(
+            string controlId, object? message)
+        {
+            var request = new Message(
+                controlId,
+                MessageTypes.Control,
+                message != null ?
+                    JToken.FromObject(message, this.Serializer) :
+                    null);
+            var tw = new StringWriter();
+            this.Serializer.Serialize(tw, request);
+            this.SendMessageToClient(tw.ToString());
+        }
+
+        protected virtual void OnReceivedControlMessage(
+            string controlId, JToken? body)
         {
         }
 
@@ -313,18 +333,7 @@ namespace DupeNukem
                 switch (message.Type)
                 {
                     case MessageTypes.Control:
-                        if (message.Id == "ready")
-                        {
-                            // Exhausted page content, maybe all suspending tasks are zombies.
-                            this.CancelAllSuspending();
-
-                            await this.synchContext.Bind();
-
-                            this.OnReady();
-
-                            // Invoke ready event.
-                            this.Ready?.Invoke(this, EventArgs.Empty);
-                        }
+                        this.OnReceivedControlMessage(message.Id, message.Body);
                         break;
 
                     case MessageTypes.Succeeded:
@@ -366,7 +375,7 @@ namespace DupeNukem
 
                             if (this.methods.SafeTryGetValue(body.Name, out var method))
                             {
-                                await this.synchContext.Bind();
+                                await this.SynchContext.Bind();
 
                                 var result = await method.InvokeAsync(body.Args).
                                     ConfigureAwait(false);

@@ -37,9 +37,9 @@ namespace DupeNukem.Internal
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public abstract class MethodDescriptor
     {
-        private readonly Messenger messenger;
+        private readonly IMessenger messenger;
 
-        private protected MethodDescriptor(Messenger messenger, MethodMetadata metadata)
+        private protected MethodDescriptor(IMessenger messenger, MethodMetadata metadata)
         {
             this.messenger = messenger;
             this.Metadata = metadata;
@@ -72,10 +72,10 @@ namespace DupeNukem.Internal
 
         private sealed class Disposer : IDisposable
         {
-            private readonly Messenger messenger;
+            private readonly IMessenger messenger;
             private readonly KeyValuePair<string, object>[] objects;
 
-            public Disposer(Messenger messenger, KeyValuePair<string, object>[] objects)
+            public Disposer(IMessenger messenger, KeyValuePair<string, object>[] objects)
             {
                 this.messenger = messenger;
                 this.objects = objects;
@@ -98,7 +98,7 @@ namespace DupeNukem.Internal
         private readonly Func<Task> action;
 
         public ActionDescriptor(
-            Func<Task> action, MethodMetadata metadata, Messenger messenger) :
+            Func<Task> action, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.action = action;
 
@@ -116,7 +116,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, Task> action;
 
         public ActionDescriptor(
-            Func<T0, Task> action, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, Task> action, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.action = action;
 
@@ -137,7 +137,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, Task> action;
 
         public ActionDescriptor(
-            Func<T0, T1, Task> action, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, Task> action, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.action = action;
 
@@ -159,7 +159,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, T2, Task> action;
 
         public ActionDescriptor(
-            Func<T0, T1, T2, Task> action, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, T2, Task> action, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.action = action;
 
@@ -182,7 +182,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, T2, T3, Task> action;
 
         public ActionDescriptor(
-            Func<T0, T1, T2, T3, Task> action, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, T2, T3, Task> action, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.action = action;
 
@@ -208,7 +208,7 @@ namespace DupeNukem.Internal
         private readonly Func<Task<TR>> func;
 
         public FuncDescriptor(
-            Func<Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            Func<Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.func = func;
 
@@ -225,7 +225,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, Task<TR>> func;
 
         public FuncDescriptor(
-            Func<T0, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.func = func;
 
@@ -245,7 +245,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, Task<TR>> func;
 
         public FuncDescriptor(
-            Func<T0, T1, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.func = func;
 
@@ -266,7 +266,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, T2, Task<TR>> func;
 
         public FuncDescriptor(
-            Func<T0, T1, T2, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, T2, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.func = func;
 
@@ -288,7 +288,7 @@ namespace DupeNukem.Internal
         private readonly Func<T0, T1, T2, T3, Task<TR>> func;
 
         public FuncDescriptor(
-            Func<T0, T1, T2, T3, Task<TR>> func, MethodMetadata metadata, Messenger messenger) :
+            Func<T0, T1, T2, T3, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata) =>
             this.func = func;
 
@@ -315,7 +315,7 @@ namespace DupeNukem.Internal
         private readonly Type[] parameterTypes;
 
         public ObjectMethodDescriptor(
-            object target, MethodInfo method, MethodMetadata metadata, Messenger messenger) :
+            object target, MethodInfo method, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata)
         {
             this.target = target;
@@ -347,7 +347,7 @@ namespace DupeNukem.Internal
         private readonly Type[] parameterTypes;
 
         public DynamicMethodDescriptor(
-            Delegate method, MethodMetadata metadata, Messenger messenger) :
+            Delegate method, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata)
         {
             this.method = method;
@@ -382,7 +382,7 @@ namespace DupeNukem.Internal
         private readonly Type[] parameterTypes;
 
         public DynamicMethodDescriptor(
-            Delegate method, MethodMetadata metadata, Messenger messenger) :
+            Delegate method, MethodMetadata metadata, IMessenger messenger) :
             base(messenger, metadata)
         {
             this.method = method;

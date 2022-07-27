@@ -25,42 +25,6 @@ using System.Threading.Tasks;
 
 namespace DupeNukem
 {
-    public sealed class InvalidMessageEventArgs : EventArgs
-    {
-        public readonly Exception Exception;
-
-        public InvalidMessageEventArgs(Exception ex) =>
-            this.Exception = ex;
-
-        public override string ToString() =>
-            this.Exception.Message;
-    }
-
-    public sealed class SpriousMessageEventArgs : EventArgs
-    {
-        public readonly string Json;
-
-        public SpriousMessageEventArgs(string json) =>
-            this.Json = json;
-
-        public override string ToString() =>
-            $"Sprious message: {this.Json}";
-    }
-
-    [Serializable]
-    public sealed class JavaScriptException : Exception
-    {
-        public readonly string Name;
-        public readonly string Detail;
-
-        public JavaScriptException(string name, string message, string detail) :
-            base(message)
-        {
-            this.Name = name;
-            this.Detail = detail;
-        }
-    }
-
     public sealed class SendRequestEventArgs : EventArgs
     {
         public readonly string JsonString;
@@ -69,7 +33,7 @@ namespace DupeNukem
             this.JsonString = jsonString;
     }
 
-    public class Messenger : IDisposable
+    public class Messenger : IMessenger, IDisposable
     {
         private static readonly NamingStrategy defaultNamingStrategy =
             new CamelCaseNamingStrategy();
@@ -82,9 +46,13 @@ namespace DupeNukem
         private readonly Timer timeoutTimer;
         private volatile int id;
 
-        protected internal readonly JsonSerializer Serializer;
         protected internal readonly NamingStrategy MemberAccessNamingStrategy;
+        protected internal readonly JsonSerializer Serializer;
 
+        NamingStrategy IMessenger.MemberAccessNamingStrategy =>
+            this.MemberAccessNamingStrategy;
+        JsonSerializer IMessenger.Serializer =>
+            this.Serializer;
         protected IEnumerable<KeyValuePair<string, MethodDescriptor>> GetRegisteredMethodPairs() =>
             this.methods;
 
@@ -154,7 +122,8 @@ namespace DupeNukem
         {
         }
 
-        internal string RegisterMethod(
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string RegisterMethod(
             string name, MethodDescriptor method, bool hasSpecifiedName)
         {
             var n = this.MemberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
@@ -168,7 +137,8 @@ namespace DupeNukem
         {
         }
 
-        internal void UnregisterMethod(string name, bool hasSpecifiedName)
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public void UnregisterMethod(string name, bool hasSpecifiedName)
         {
             var n = this.MemberAccessNamingStrategy.GetConvertedName(name, hasSpecifiedName);
             if (this.methods.TryGetValue(n, out var method))
@@ -286,27 +256,36 @@ namespace DupeNukem
             this.SendMessageToClient(tw.ToString());
         }
 
-        public Task InvokeClientFunctionAsync(
-            CancellationToken ct, string functionName, params object?[] args)
+        public Task InvokePeerMethodAsync(
+            CancellationToken ct, string methodName, params object?[] args)
         {
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new VoidSuspendingDescriptor();
-            this.SendMessageToClient(descriptor, ct, functionName, args);
+            this.SendMessageToClient(descriptor, ct, methodName, args);
 
             return descriptor.Task;
         }
 
-        public Task<TR> InvokeClientFunctionAsync<TR>(
-            CancellationToken ct, string functionName, params object?[] args)
+        public Task<TR> InvokePeerMethodAsync<TR>(
+            CancellationToken ct, string methodName, params object?[] args)
         {
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new SuspendingDescriptor<TR>();
-            this.SendMessageToClient(descriptor, ct, functionName, args);
+            this.SendMessageToClient(descriptor, ct, methodName, args);
 
             return descriptor.Task;
         }
+
+        [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
+        public Task InvokeClientFunctionAsync(
+            CancellationToken ct, string functionName, params object?[] args) =>
+            this.InvokePeerMethodAsync(ct, functionName, args);
+        [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
+        public Task<TR> InvokeClientFunctionAsync<TR>(
+            CancellationToken ct, string functionName, params object?[] args) =>
+            this.InvokePeerMethodAsync<TR>(ct, functionName, args);
 
         ///////////////////////////////////////////////////////////////////////////////
 

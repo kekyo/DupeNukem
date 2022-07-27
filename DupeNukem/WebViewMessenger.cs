@@ -42,6 +42,16 @@ namespace DupeNukem
         {
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            this.Ready = null;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        public event EventHandler? Ready;
+
         ///////////////////////////////////////////////////////////////////////////////
 
         public string PostMessageSymbolName =>
@@ -63,30 +73,15 @@ namespace DupeNukem
         private void InjectFunctionProxy(string name, MethodMetadata metadata)
         {
             var obsolete = metadata.Obsolete;
-
             var injectBody = new InjectBody(
                 name,
                 obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
                 obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
-            var request = new Message(
-                "inject",
-                MessageTypes.Control,
-                JToken.FromObject(injectBody, this.Serializer));
-            var tw = new StringWriter();
-            this.Serializer.Serialize(tw, request);
-            this.SendMessageToClient(tw.ToString());
+            this.SendControlMessageToPeer("inject", injectBody);
         }
 
-        private void DeleteFunctionProxy(string name)
-        {
-            var request = new Message(
-                "delete",
-                MessageTypes.Control,
-                JToken.FromObject(name, this.Serializer));
-            var tw = new StringWriter();
-            this.Serializer.Serialize(tw, request);
-            this.SendMessageToClient(tw.ToString());
-        }
+        private void DeleteFunctionProxy(string name) =>
+            this.SendControlMessageToPeer("delete", name);
 
         protected override void OnRegisterMethod(
             string name, MethodDescriptor method, bool hasSpecifiedName)
@@ -106,15 +101,29 @@ namespace DupeNukem
             }
         }
 
-        protected override void OnReady()
+        protected override async void OnReceivedControlMessage(
+            string controlId, JToken? body)
         {
-            // Inject JavaScript proxies.
-            foreach (var kv in this.GetRegisteredMethodPairs())
+            switch (controlId)
             {
-                if (kv.Value.Metadata.IsProxyInjecting)
-                {
-                    this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
-                }
+                case "ready":
+                    // Exhausted page content, maybe all suspending tasks are zombies.
+                    this.CancelAllSuspending();
+
+                    await this.SynchContext.Bind();
+
+                    // Inject JavaScript proxies.
+                    foreach (var kv in this.GetRegisteredMethodPairs())
+                    {
+                        if (kv.Value.Metadata.IsProxyInjecting)
+                        {
+                            this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
+                        }
+                    }
+
+                    // Invoke ready event.
+                    this.Ready?.Invoke(this, EventArgs.Empty);
+                    break;
             }
         }
     }

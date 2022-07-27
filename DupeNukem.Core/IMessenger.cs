@@ -64,7 +64,6 @@ namespace DupeNukem
 
         string[] RegisteredMethods { get; }
 
-        event EventHandler? Ready;
         event EventHandler? ErrorDetected;
 
         [EditorBrowsable(EditorBrowsableState.Never)]

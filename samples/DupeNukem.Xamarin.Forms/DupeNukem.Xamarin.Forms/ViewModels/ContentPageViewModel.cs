@@ -126,33 +126,35 @@ namespace DupeNukem.ViewModels
             messenger.Ready += async (s, e) =>
             {
                 // Test JavaScript --> .NET methods:
-                await messenger.InvokeClientFunctionAsync("tester");
+                await messenger.InvokePeerMethodAsync("tester");
 
                 // Invoke .NET --> JavaScript functions:
-                var result_add = await messenger.InvokeClientFunctionAsync<int>(
+                var result_add = await messenger.InvokePeerMethodAsync<int>(
                     "js_add", 1, 2);
                 Trace.WriteLine($"js_add: {result_add}");
-                var result_sub = await messenger.InvokeClientFunctionAsync<int>(
+                var result_sub = await messenger.InvokePeerMethodAsync<int>(
                     "js_sub", 1, 2);
                 Trace.WriteLine($"js_sub: {result_sub}");
-                var result_enum1 = await messenger.InvokeClientFunctionAsync<ConsoleKey>(
+                var result_enum1 = await messenger.InvokePeerMethodAsync<ConsoleKey>(
                     "js_enum1", ConsoleKey.Print);
                 Trace.WriteLine($"js_enum1: {result_enum1}");
-                var result_enum2 = await messenger.InvokeClientFunctionAsync<ConsoleKey>(
+                var result_enum2 = await messenger.InvokePeerMethodAsync<ConsoleKey>(
                     "js_enum2", ConsoleKey.Print);
                 Trace.WriteLine($"js_enum2: {result_enum2}");
-                var result_array = await messenger.InvokeClientFunctionAsync<ConsoleKey[]>(
+                var result_array = await messenger.InvokePeerMethodAsync<ConsoleKey[]>(
                     "js_array", new[] { ConsoleKey.Print, ConsoleKey.Enter, ConsoleKey.Escape });
                 Trace.WriteLine($"js_array: [{string.Join(",", result_array)}]");
                 try
                 {
-                    await messenger.InvokeClientFunctionAsync("unknown");
+                    await messenger.InvokePeerMethodAsync("unknown");
                     Trace.WriteLine("BUG detected.");
                 }
                 catch (JavaScriptException)
                 {
                     Trace.WriteLine("PASS: Unknown function invoking [unknown]");
                 }
+
+                Trace.WriteLine("ALL TEST IS DONE AT .NET SIDE.");
             };
         }
 
@@ -206,6 +208,7 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
             script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
             script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
+            script.AppendLine("  console.log('ALL TEST IS DONE AT JavaScript SIDE.');");
             script.AppendLine("}");
             // ----
         }

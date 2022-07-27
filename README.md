@@ -31,7 +31,7 @@ The only requirement is to be able to send and receive strings to and from each 
 
 This is a diagrammatic representation of the message transfer performed by DupeNukem.
 
-.NET side to call a function on the JavaScript side, the `InvokeClientFunctionAsync` method returns a `Task`, so it can wait asynchronously:
+.NET side to call a function on the JavaScript side, the `InvokePeerMethodAsync` method returns a `Task`, so it can wait asynchronously:
 
 ![.NET world to JavaScript invoking](Images/diagram1.png)
 
@@ -57,10 +57,10 @@ Really? Now let's look at the actual calling code both side.
 Invoke JavaScript functions from .NET side:
 
 ```csharp
-var result_add = await messenger.InvokeClientFunctionAsync<int>(
+var result_add = await messenger.InvokePeerMethodAsync<int>(
     "js_add", 1, 2);
 
-var result_sub = await messenger.InvokeClientFunctionAsync<int>(
+var result_sub = await messenger.InvokePeerMethodAsync<int>(
     "js_sub", 1, 2);
 ```
 
@@ -90,6 +90,9 @@ In the code example below (Edge WebView2 on WPF), Step 2 and Step 3 are also set
 
 (Another browser components maybe same as setup process.
 See [Gluing browsers](#gluing-browsers) section below.)
+
+First time, you need to install [DupeNukem package from NuGet](https://www.nuget.org/packages/DupeNukem).
+Then write initial sequence:
 
 ```csharp
 // Startup sequence.
@@ -189,12 +192,12 @@ Declare functions around JavaScript side:
 ```javascript
 // Global functions:
 
-// .NET: `var result = await messenger.InvokeClientFunctionAsync("js_add", 1, 2);`
+// .NET: `var result = await messenger.InvokePeerMethodAsync("js_add", 1, 2);`
 async function js_add(a, b) {
     return a + b;
 }
 
-// .NET: `var result = await messenger.InvokeClientFunctionAsync("js_sub", 1, 2);`
+// .NET: `var result = await messenger.InvokePeerMethodAsync("js_sub", 1, 2);`
 async function js_sub(a, b) {
     return a - b;
 }
@@ -211,8 +214,8 @@ class Foo
     }
 }
 
-// .NET: `var result = await messenger.InvokeClientFunctionAsync("foo.add", 1, 2);`
-// .NET: `var result = await messenger.InvokeClientFunctionAsync("foo.sub", 1, 2);`
+// .NET: `var result = await messenger.InvokePeerMethodAsync("foo.add", 1, 2);`
+// .NET: `var result = await messenger.InvokePeerMethodAsync("foo.sub", 1, 2);`
 var foo = new Foo();
 ```
 

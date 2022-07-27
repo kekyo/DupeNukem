@@ -13,7 +13,7 @@ using System;
 
 namespace DupeNukem
 {
-    [Obsolete("JavaScriptTargetAttribute will be remove in future release. Use instead of CallableTargetAttribute")]
+    [Obsolete("JavaScriptTargetAttribute will be removed in future release. Use instead of CallableTargetAttribute")]
     [AttributeUsage(AttributeTargets.Method)]
     public sealed class JavaScriptTargetAttribute : CallableTargetAttribute
     {

@@ -209,12 +209,11 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        private async void SendMessageToClient(string jsonString)
+        private async void SendMessageToPeer(string jsonString)
         {
             if (this.SendRequest is { } sendRequest)
             {
                 await this.SynchContext.Bind();
-
                 sendRequest(this, new SendRequestEventArgs(jsonString));
             }
             else
@@ -223,7 +222,7 @@ namespace DupeNukem
             }
         }
 
-        private void SendMessageToClient(
+        private void SendInvokeMessageToPeer(
             SuspendingDescriptor descriptor, CancellationToken ct,
             string functionName, object?[] args)
         {
@@ -252,12 +251,14 @@ namespace DupeNukem
                 args.Select(arg => arg != null ? JToken.FromObject(arg, this.Serializer) : null).
                 ToArray());
             var request = new Message(
-                id, MessageTypes.Invoke, JToken.FromObject(body, this.Serializer));
+                id,
+                MessageTypes.Invoke,
+                JToken.FromObject(body, this.Serializer));
 
             var tw = new StringWriter();
             this.Serializer.Serialize(tw, request);
 
-            this.SendMessageToClient(tw.ToString());
+            this.SendMessageToPeer(tw.ToString());
         }
 
         public Task InvokePeerMethodAsync(
@@ -266,7 +267,7 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new VoidSuspendingDescriptor();
-            this.SendMessageToClient(descriptor, ct, methodName, args);
+            this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
             return descriptor.Task;
         }
@@ -277,7 +278,7 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new SuspendingDescriptor<TR>();
-            this.SendMessageToClient(descriptor, ct, methodName, args);
+            this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
             return descriptor.Task;
         }
@@ -304,7 +305,7 @@ namespace DupeNukem
                     null);
             var tw = new StringWriter();
             this.Serializer.Serialize(tw, request);
-            this.SendMessageToClient(tw.ToString());
+            this.SendMessageToPeer(tw.ToString());
         }
 
         protected virtual void OnReceivedControlMessage(
@@ -312,15 +313,18 @@ namespace DupeNukem
         {
         }
 
-        private void SendExceptionToClient(Message message, ExceptionBody responseBody)
+        private void SendExceptionMessageToPeer(
+            Message message, ExceptionBody responseBody)
         {
             var response = new Message(
-                message.Id, MessageTypes.Failed, JToken.FromObject(responseBody, this.Serializer));
+                message.Id,
+                MessageTypes.Failed,
+                JToken.FromObject(responseBody, this.Serializer));
 
             var tw = new StringWriter();
             this.Serializer.Serialize(tw, response);
 
-            this.SendMessageToClient(tw.ToString());
+            this.SendMessageToPeer(tw.ToString());
         }
 
         public async void ReceivedRequest(string jsonString)
@@ -382,20 +386,23 @@ namespace DupeNukem
 
                                 var response = new Message(
                                     message.Id, MessageTypes.Succeeded,
-                                    (result != null) ? JToken.FromObject(result, this.Serializer) : null);
+                                    (result != null) ?
+                                        JToken.FromObject(result, this.Serializer) :
+                                        null);
 
                                 var tw = new StringWriter();
                                 this.Serializer.Serialize(tw, response);
 
-                                this.SendMessageToClient(tw.ToString());
+                                this.SendMessageToPeer(tw.ToString());
                             }
                             else
                             {
                                 var responseBody = new ExceptionBody(
-                                    "InvalidMethodName", $"Method '{body.Name}' is not found.",
+                                    "InvalidMethodName",
+                                    $"Method '{body.Name}' is not found.",
                                     string.Empty);
 
-                                this.SendExceptionToClient(message, responseBody);
+                                this.SendExceptionMessageToPeer(message, responseBody);
                             }
                         }
                         catch (Exception ex)
@@ -404,7 +411,7 @@ namespace DupeNukem
                                 ex.GetType().FullName!, ex.Message,
                                 this.SendExceptionWithStackTrace ? (ex.StackTrace ?? string.Empty) : string.Empty);
 
-                            this.SendExceptionToClient(message, responseBody);
+                            this.SendExceptionMessageToPeer(message, responseBody);
                         }
                         break;
                 }

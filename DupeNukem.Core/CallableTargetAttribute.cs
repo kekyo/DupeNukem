@@ -18,9 +18,13 @@ namespace DupeNukem
     {
         public readonly string? Name;
 
-        public CallableTargetAttribute()
-        {
-        }
+        public readonly bool TrimAsync;
+
+        public CallableTargetAttribute() =>
+            this.TrimAsync = true;
+
+        public CallableTargetAttribute(bool trimAsync) =>
+            this.TrimAsync = trimAsync;
 
         public CallableTargetAttribute(string name) =>
             this.Name = name;

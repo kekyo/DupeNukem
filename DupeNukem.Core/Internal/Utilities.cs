@@ -114,10 +114,15 @@ namespace DupeNukem.Internal
 #endif
         }
 
-        internal static string GetName(MethodInfo method)
+        internal static string GetName(
+            MethodInfo method, bool trimAsync)
         {
             var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 method.Name.Substring(0, index) : method.Name;
+            if (trimAsync && mn.EndsWith("Async"))
+            {
+                mn = mn.Substring(0, mn.Length - 5);
+            }
             if (method.IsGenericMethod)
             {
                 var gtns = Join(
@@ -130,7 +135,8 @@ namespace DupeNukem.Internal
             }
         }
 
-        internal static string GetFullName(MethodInfo method, Type? runtimeType)
+        internal static string GetFullName(
+            MethodInfo method, Type? runtimeType, bool trimAsync)
         {
             var tn = (runtimeType != null) ?
                 GetFullName(runtimeType) :
@@ -138,6 +144,10 @@ namespace DupeNukem.Internal
                     GetFullName(dt) : "global";
             var mn = method.Name.LastIndexOf('`') is { } index && index >= 0 ?
                 method.Name.Substring(0, index) : method.Name;
+            if (trimAsync && mn.EndsWith("Async"))
+            {
+                mn = mn.Substring(0, mn.Length - 5);
+            }
             if (method.IsGenericMethod)
             {
                 var gtns = Join(
@@ -152,9 +162,9 @@ namespace DupeNukem.Internal
 
         internal static string GetMethodFullName(Delegate dlg) =>
 #if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-            GetFullName(dlg.GetMethodInfo(), dlg.Target?.GetType());
+            GetFullName(dlg.GetMethodInfo(), dlg.Target?.GetType(), true);
 #else
-            GetFullName(dlg.Method, dlg.Target?.GetType());
+            GetFullName(dlg.Method, dlg.Target?.GetType(), true);
 #endif
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -171,13 +181,15 @@ namespace DupeNukem.Internal
                 Select(element => ns.GetPropertyName(element, hasSpecifiedName)));
 
         private static string GetMethodName(
-            MethodInfo method, Type? runtimeType, string? specifiedName, bool isFullName, NamingStrategy ns)
+            MethodInfo method, Type? runtimeType,
+            string? specifiedName, bool isFullName,
+            NamingStrategy ns, bool trimAsync)
         {
             if (IsNullOrWhiteSpace(specifiedName))
             {
                 var methodName = isFullName ?
-                    GetFullName(method, runtimeType) :
-                    GetName(method);
+                    GetFullName(method, runtimeType, trimAsync) :
+                    GetName(method, trimAsync);
                 return ns.GetConvertedName(methodName);
             }
             else
@@ -212,7 +224,10 @@ namespace DupeNukem.Internal
                     Method = method,
                     MethodName = method.GetCustomAttributes(typeof(CallableTargetAttribute), true) is object[] cas &&
                         cas.Length >= 1 && cas[0] is CallableTargetAttribute a ?
-                            GetMethodName(method, target.GetType(), a.Name, isFullName, memberAccessNamingStrategy) :
+                            GetMethodName(
+                                method, target.GetType(),
+                                a.Name, isFullName,
+                                memberAccessNamingStrategy, a.TrimAsync) :
                             null!,
                 }).
                 Where(entry => entry.MethodName != null);

@@ -248,6 +248,10 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  } catch (e) {");
             script.AppendLine("    console.log('PASS: Fatal obsoleted [calc.add_obsoleted3]');");
             script.AppendLine("  }");
+
+            script.AppendLine("  const result_calc_mul = await calc.mul(2, 3);");
+            script.AppendLine("  console.log('calc.mul: ' + result_calc_mul);");
+
             script.AppendLine("  console.log('ALL TEST IS DONE AT JavaScript SIDE.');");
 
             script.AppendLine("}");

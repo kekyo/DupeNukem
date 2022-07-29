@@ -138,8 +138,8 @@ Bulk register methods on an object:
 // Apply `CallableTarget` attribute on target callee method.
 public class Calculator
 {
-    [CallableTarget]
-    public Task<int> Add(int a, int b)
+    [CallableTarget]   // Automatic trimmed naming 'add'
+    public Task<int> AddAsync(int a, int b)
     {
         // ...
     }
@@ -255,8 +255,8 @@ catch (e) {
 .NET implementation:
 
 ```csharp
-[CallableTarget("longAwaitedMethod")]
-public async Task<int> LongAwaitedMethod(
+[CallableTarget]
+public async Task<int> LongAwaitedMethodAsync(
     int a, int b, CancellationToken ct)
 {
     // Pass a CancellationToken to a time-consuming asynchronous process:
@@ -282,8 +282,9 @@ If the normal `Obsolete` attribute is applied,
 the following warning message will appear in the JavaScript console output:
 
 ```csharp
+[CallableTarget]
 [Obsolete("This method will be obsoleted, switch to use `add_ng`.")]
-public static Task<int> add(int a, int b)
+public static Task<int> AddAsync(int a, int b)
 {
   // ...
 }
@@ -297,10 +298,10 @@ Also, if an error flag is applied to the `Obsolete` attribute,
 an exception will be thrown on the fly:
 
 ```csharp
+[CallableTarget]
 [Obsolete("This method is obsoleted, have to switch `add_ng`.", true)]
-public static Task<int> add(int a, int b) =>
-    throw new InvalidOperationException(
-        "This method is obsoleted, have to switch `add_ng`.");
+public static Task<int> AddAsync(int a, int b) =>
+    // ...
 ```
 
 ```javascript
@@ -442,6 +443,8 @@ Apache-v2.
 
 ## History
 
+* 0.18.0:
+  * Added trim 'Async' from method name feature. 
 * 0.17.2:
   * Exposed control message interface on core library.
 * 0.17.1:

@@ -82,5 +82,12 @@ namespace DupeNukem.ViewModels
             await Task.Delay(100);
             return a + b;
         }
+
+        [CallableTarget]
+        public async Task<int> mulAsync(int a, int b)   // mul(a, b)
+        {
+            await Task.Delay(100);
+            return a * b;
+        }
     }
 }

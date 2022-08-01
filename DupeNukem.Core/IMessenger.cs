@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // independent messaging library between .NET and JavaScript.
@@ -39,14 +39,37 @@ namespace DupeNukem
 
         public override string ToString() =>
             $"Sprious message: {this.Json}";
+
+        }
+
+    [Serializable]
+    public sealed class PeerInvocationException : Exception
+    {
+        public readonly string Name;
+        public readonly string Detail;
+
+        public PeerInvocationException(string name, string message, string detail) :
+            base(message)
+        {
+            this.Name = name;
+            this.Detail = detail;
+        }
+
+        public void Deconstruct(out string name, out string detail)
+        {
+            name = this.Name;
+            detail = this.Detail;
+        }
     }
 
+    [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
     [Serializable]
     public sealed class JavaScriptException : Exception
     {
         public readonly string Name;
         public readonly string Detail;
 
+        [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
         public JavaScriptException(string name, string message, string detail) :
             base(message)
         {

@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // independent messaging library between .NET and JavaScript.
@@ -359,7 +359,7 @@ namespace DupeNukem
                             var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
                             try
                             {
-                                throw new JavaScriptException(error.Name, error.Message, error.Detail);
+                                throw new RemoteTargetException(error.Name, error.Message, error.Detail);
                             }
                             catch (Exception ex)
                             {

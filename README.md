@@ -443,6 +443,9 @@ Apache-v2.
 
 ## History
 
+* 0.19.0:
+  * Changed `PeerInvocationException` instead of `JavaScriptException`.
+  * Added some deconstructor for entity classes.
 * 0.18.0:
   * Added trim 'Async' from method name feature. 
 * 0.17.2:

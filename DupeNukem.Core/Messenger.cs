@@ -31,6 +31,9 @@ namespace DupeNukem
 
         public SendRequestEventArgs(string jsonString) =>
             this.JsonString = jsonString;
+
+        public void Deconstruct(out string sendRequest) =>
+            sendRequest = this.JsonString;
     }
 
     public class Messenger : IMessenger, IDisposable
@@ -359,7 +362,7 @@ namespace DupeNukem
                             var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
                             try
                             {
-                                throw new JavaScriptException(error.Name, error.Message, error.Detail);
+                                throw new PeerInvocationException(error.Name, error.Message, error.Detail);
                             }
                             catch (Exception ex)
                             {

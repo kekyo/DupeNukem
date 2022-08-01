@@ -28,6 +28,9 @@ namespace DupeNukem
 
         public override string ToString() =>
             this.Exception.Message;
+
+        public void Deconstruct(out Exception exception) =>
+            exception = this.Exception;
     }
 
     public sealed class SpriousMessageEventArgs : EventArgs
@@ -39,14 +42,39 @@ namespace DupeNukem
 
         public override string ToString() =>
             $"Sprious message: {this.Json}";
+
+        public void Deconstruct(out string json) =>
+            json = this.Json;
     }
 
+    [Serializable]
+    public sealed class PeerInvocationException : Exception
+    {
+        public readonly string Name;
+        public readonly string Detail;
+
+        public PeerInvocationException(string name, string message, string detail) :
+            base(message)
+        {
+            this.Name = name;
+            this.Detail = detail;
+        }
+
+        public void Deconstruct(out string name, out string detail)
+        {
+            name = this.Name;
+            detail = this.Detail;
+        }
+    }
+
+    [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
     [Serializable]
     public sealed class JavaScriptException : Exception
     {
         public readonly string Name;
         public readonly string Detail;
 
+        [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
         public JavaScriptException(string name, string message, string detail) :
             base(message)
         {

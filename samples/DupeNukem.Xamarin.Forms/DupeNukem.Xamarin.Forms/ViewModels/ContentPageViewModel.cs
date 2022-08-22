@@ -149,7 +149,7 @@ namespace DupeNukem.ViewModels
                     await messenger.InvokePeerMethodAsync("unknown");
                     Trace.WriteLine("BUG detected.");
                 }
-                catch (JavaScriptException)
+                catch (PeerInvocationException)
                 {
                     Trace.WriteLine("PASS: Unknown function invoking [unknown]");
                 }

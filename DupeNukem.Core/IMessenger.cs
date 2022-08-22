@@ -67,22 +67,6 @@ namespace DupeNukem
         }
     }
 
-    [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
-    [Serializable]
-    public sealed class JavaScriptException : Exception
-    {
-        public readonly string Name;
-        public readonly string Detail;
-
-        [Obsolete("JavaScriptException no longer to use and will be remove in future release. Use instead of PeerInvocationException")]
-        public JavaScriptException(string name, string message, string detail) :
-            base(message)
-        {
-            this.Name = name;
-            this.Detail = detail;
-        }
-    }
-
     public interface IMessenger
     {
         [EditorBrowsable(EditorBrowsableState.Never)]

@@ -83,13 +83,11 @@ namespace DupeNukem
             return serializer;
         }
 
-        [Obsolete("Use instead of WebViewMessenger class")]
         public Messenger(TimeSpan? timeoutDuration = default) :
             this(GetDefaultJsonSerializer(), defaultNamingStrategy, timeoutDuration)
         {
         }
 
-        [Obsolete("Use instead of WebViewMessenger class")]
         public Messenger(
             JsonSerializer serializer,
             NamingStrategy memberAccessNamingStrategy,
@@ -285,15 +283,6 @@ namespace DupeNukem
 
             return descriptor.Task;
         }
-
-        [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
-        public Task InvokeClientFunctionAsync(
-            CancellationToken ct, string functionName, params object?[] args) =>
-            this.InvokePeerMethodAsync(ct, functionName, args);
-        [Obsolete("InvokeClientFunctionAsync will be removed in future release. Use instead of InvokePeerMethodAsync")]
-        public Task<TR> InvokeClientFunctionAsync<TR>(
-            CancellationToken ct, string functionName, params object?[] args) =>
-            this.InvokePeerMethodAsync<TR>(ct, functionName, args);
 
         ///////////////////////////////////////////////////////////////////////////////
 

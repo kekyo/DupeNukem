@@ -17,8 +17,6 @@ using System;
 using System.IO;
 using System.Text;
 
-#pragma warning disable CS0618
-
 namespace DupeNukem
 {
     public static class SendRequestEventArgsExtension

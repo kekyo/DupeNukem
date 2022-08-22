@@ -31,6 +31,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DupeNukem.Xamarin.Forms", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DupeNukem.Core", "DupeNukem.Core\DupeNukem.Core.csproj", "{998F0B7A-6665-42DB-8CCC-127266E066BB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DupeNukem.Cpp", "DupeNukem.Cpp", "{A9C7D41E-9FDB-4BD7-9E31-1469C1F84EF2}"
+	ProjectSection(SolutionItems) = preProject
+		DupeNukem.Cpp\DupeNukem.h = DupeNukem.Cpp\DupeNukem.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

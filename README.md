@@ -443,6 +443,8 @@ Apache-v2.
 
 ## History
 
+* 0.20.0:
+  * Removed obsoleted fragments.
 * 0.19.0:
   * Changed `PeerInvocationException` instead of `JavaScriptException`.
   * Added some deconstructor for entity classes.

@@ -31,7 +31,7 @@
     <PackageIcon>DupeNukem.100.png</PackageIcon>
     <!-- <PackageTags>webview1;webview2;interoperability;dotnet;javascript</PackageTags> -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <NoWarn>$(NoWarn);NU1605;NU1701</NoWarn>
+    <NoWarn>$(NoWarn);NU1605;NU1701;NU1803</NoWarn>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

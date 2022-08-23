@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -27,9 +29,9 @@ namespace DupeNukem
     template<typename T> class Promise
     {
     public:
-        typedef std::function<void(const T&)> resolve_type;
-        typedef std::function<void(const std::exception&)> reject_type;
-        typedef std::function<void(void)> final_type;
+        using resolve_type = std::function<void(const T&)>;
+        using reject_type = std::function<void(const std::exception&)>;
+        using final_type = std::function<void(void)>;
 
     private:
         enum States {
@@ -39,20 +41,20 @@ namespace DupeNukem
             Finalized
         };
 
-        typedef std::lock_guard<std::mutex> locker_type;
+        using locker_type = std::lock_guard<std::mutex>;
 
         std::vector<resolve_type> resolvers__;
         std::vector<reject_type> rejectors__;
         std::vector<final_type> finalizers__;
 
-        std::unique_ptr<std::mutex> lockerPtr__;
+        std::unique_ptr<std::mutex> mutexPtr__;
         volatile States state__ = Pending;
 
         T value__;
         std::exception ex__;
 
         void finalizeAllWhenRequired() {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             if (finalizers__.size() >= 1) {
                 state__ = Finalized;
                 for (auto& finalize : finalizers__) {
@@ -63,45 +65,45 @@ namespace DupeNukem
 
     public:
         Promise() :
-            lockerPtr__(new std::mutex()) {
+            mutexPtr__(new std::mutex()) {
         }
 
-        Promise(const Promise<T>& promise) {
-            *this = promise;
+        Promise(const Promise<T>& rhs) {
+            *this = rhs;
         }
 
-        Promise(Promise<T>&& promise) noexcept {
-            *this = promise;
+        Promise(Promise<T>&& rhs) noexcept {
+            *this = rhs;
         }
 
         Promise<T>& operator =(const Promise& rhs) {
-            lockerPtr__ = rhs.lockerPtr__;
-            locker_type locker(lockerPtr__.get());
+            mutexPtr__ = rhs.mutexPtr__;
+            locker_type locker(mutexPtr__.get());
 
-            resolvers__ = promise.resolvers__;
-            rejectors__ = promise.rejectors__;
-            finalizers__ = promise.finalizers__;
-            state__ = promise.state__;
-            value__ = promise.value__;
-            ex__ = promise.ex__;
+            resolvers__ = rhs.resolvers__;
+            rejectors__ = rhs.rejectors__;
+            finalizers__ = rhs.finalizers__;
+            state__ = rhs.state__;
+            value__ = rhs.value__;
+            ex__ = rhs.ex__;
             return *this;
         }
 
         Promise<T>& operator =(Promise&& rhs) noexcept {
-            lockerPtr__ = std::move(rhs.lockerPtr__);
-            locker_type locker(lockerPtr__.get());
+            mutexPtr__ = std::move(rhs.mutexPtr__);
+            locker_type locker(mutexPtr__.get());
 
-            resolvers__ = std::move(promise.resolvers__);
-            rejectors__ = std::move(promise.rejectors__);
-            finalizers__ = std::move(promise.finalizers__);
-            state__ = std::move(promise.state__);
-            value__ = std::move(promise.value__);
-            ex__ = std::move(promise.ex__);
+            resolvers__ = std::move(rhs.resolvers__);
+            rejectors__ = std::move(rhs.rejectors__);
+            finalizers__ = std::move(rhs.finalizers__);
+            state__ = std::move(rhs.state__);
+            value__ = std::move(rhs.value__);
+            ex__ = std::move(rhs.ex__);
             return *this;
         }
 
         void resolved(const T& value) {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             if (state__ == Pending) {
                 value__ = value;
                 state__ = Resolved;
@@ -113,11 +115,11 @@ namespace DupeNukem
         }
 
         void rejected(const std::exception& ex) {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             if (state__ == Pending) {
                 ex__ = ex;
                 state__ = Rejected;
-                for (auto& reject = rejectors__) {
+                for (auto& reject : rejectors__) {
                     reject(value__);
                 }
                 finalizeAllWhenRequired();
@@ -125,7 +127,7 @@ namespace DupeNukem
         }
 
         Promise<T>& then(const resolve_type& resolve) {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             switch (state__) {
             case Pending:
                 resolvers__.push_back(resolve);
@@ -141,7 +143,7 @@ namespace DupeNukem
         }
 
         Promise<T>& caught(const reject_type& reject) {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             switch (state__) {
             case Pending:
                 rejectors__.push_back(reject);
@@ -157,7 +159,7 @@ namespace DupeNukem
         }
 
         Promise<T> & final(const final_type& finalize) {
-            locker_type locker(lockerPtr__.get());
+            locker_type locker(mutexPtr__.get());
             switch (state__) {
             case Pending:
                 finalizers__.push_back(finalize);
@@ -172,6 +174,8 @@ namespace DupeNukem
             return *this;
         }
     };
+
+    //////////////////////////////////////////////////////////
 
     class PeerInvocationException : public std::exception
     {
@@ -189,22 +193,20 @@ namespace DupeNukem
         }
 
         PeerInvocationException(
-            const PeerInvocationException& ex) = default;
-
+            const PeerInvocationException&) = default;
         PeerInvocationException(
-            PeerInvocationException&& ex) noexcept = default;
+            PeerInvocationException&&) noexcept = default;
 
         PeerInvocationException& operator =(
-            const PeerInvocationException& rhs) = default;
-
+            const PeerInvocationException&) = default;
         PeerInvocationException& operator =(
-            PeerInvocationException&& rhs) noexcept = default;
+            PeerInvocationException&&) noexcept = default;
 
         const char* name() const {
             return name__.c_str();
         }
 
-        virtual const char* what() {
+        virtual const char* what() const noexcept {
             return message__.c_str();
         }
 
@@ -213,69 +215,151 @@ namespace DupeNukem
         }
     };
 
-    class Message
+    //////////////////////////////////////////////////////////
+
+    template <typename T> class Optional
     {
     private:
-        const int32_t id__;
+        bool has__;
+        T value__;
     public:
-        Message(const int32_t id) :
-            id__(id) {
+        constexpr Optional() noexcept :
+            has__(false) {
         }
 
-        int32_t id() const {
-            return id__;
+        constexpr Optional(const T& value) :
+            has__(true), value__(value) {
+        }
+
+        constexpr Optional(T&& value) noexcept :
+            has__(true), value__(std::move(value)) {
+        }
+
+        constexpr Optional(const Optional<T>& rhs) = default;
+        constexpr Optional(Optional<T>&& rhs) noexcept = default;
+
+        Optional<T>& operator =(const T& rhs) {
+            has__ = true;
+            value__ = rhs;
+            return *this;
+        }
+        Optional<T>& operator =(T&& rhs) noexcept {
+            has__ = true;
+            value__ = std::move(rhs.value__);
+            return *this;
+        }
+
+        Optional<T>& operator =(const Optional<T>& rhs) = default;
+        Optional<T>& operator =(Optional<T>&& rhs) noexcept = default;
+
+        void reset() {
+            has__ = false;
+            value__ = std::move(T());
+        }
+
+        constexpr explicit operator bool() const noexcept {
+            return has__;
+        }
+        T* operator ->() {
+            return &value__;
+        }
+        constexpr const T* operator ->() const {
+            return &value__;
+        }
+        T& operator *() {
+            return value__;
+        }
+        constexpr const T& operator *() const {
+            return value__;
         }
     };
 
-    class Messenger
+    //////////////////////////////////////////////////////////
+
+    template <typename TJsonAllocator> class Messenger__
     {
     public:
-        typedef std::function<void(const String&)> log_type;
-        typedef std::function<void(const String&)> sendToHostMessage_type;
-        typedef Promise<const JsonVariant> promise_type;
+        using log_type = std::function<void(const String&)>;
+        using sendToHostMessage_type = std::function<void(const String&)>;
+        using promise_type = Promise<const JsonVariant>;
+        using function_type = std::function<promise_type(JsonArray)>;
 
     private:
+        using jsonDocument_type = BasicJsonDocument<TJsonAllocator>;
+        using locker_type = std::lock_guard<std::mutex>;
+
         const log_type log__;
         const sendToHostMessage_type sendToHostMessage__;
 
-        //const std::unordered_map<const String, std::function<>> functions__;
-        std::unordered_map<int32_t, promise_type> suspendings__;
+        std::unordered_map<const String, function_type> functions__;
+        std::unordered_map<const String, promise_type> suspendings__;
+
+        std::mutex functionsMutex__;
+        std::mutex suspendingsMutex__;
 
         int32_t id__ = 0;
         bool debugLog__ = false;
 
-        void sendExceptionToHost__(
-            const Message& message,
-            const std::exception& exceptionBody) const {
+        template <typename T> static Optional<T> find(
+            std::unordered_map<const String, T>& map,
+            const String& key,
+            std::mutex& mutex) {
+            locker_type locker(mutex);
+            auto iter = map.find(key);
+            return iter != map.end() ?
+                Optional<T>(*iter) :
+                Optional<T>();
+        }
 
-            StaticJsonDocument<50> messageJson;
-            messageJson["id"] = message.id();
-            messageJson["type"] = "failed";
-            messageJson["body"] = exceptionBody.what();
+        void sendMessageToHost(
+            JsonDocument& messageJson,
+            const String& id,
+            const char* pType) {
+            messageJson["id"] = id;
+            messageJson["type"] = pType;
 
             String messageString;
             serializeJson(messageJson, messageString);
 
             sendToHostMessage__(messageString);
-        };
+        }
 
-        void arrivedHostMesssage__(const String& jsonString) {
+        void sendExceptionToHost(
+            const String& id,
+            const String& name,
+            const String& message) const {
+            jsonDocument_type messageJson;
+
+            auto body = messageJson.createNestedObject("body");
+            body["name"] = name;
+            body["message"] = message;
+            body["detail"] = message;
+
+            sendMessageToHost(messageJson, id, "failed");
+        }
+
+        void sendExceptionToHost(
+            const String& id,
+            const std::exception& ex) const {
+            sendExceptionToHost(id, "exception", ex.what());
+        }
+
+        void arrivedHostMesssage(const String& jsonString) {
             try {
-                DynamicJsonDocument messageJson(200);
+                jsonDocument_type messageJson;
                 deserializeJson(messageJson, jsonString);
 
-                const auto id = messageJson["id"].as<int32_t>();
-                const auto type = messageJson["type"].as<String>();
-                const auto body = messageJson["body"].as<JsonVariant>();
+                const String& id = messageJson["id"];
+                const String& type = messageJson["type"];
+                const JsonVariant& body = messageJson["body"];
 
                 if (type == "succeeded") {
                     log__(String("DupeNukem: succeeded: ") + id);
-                    auto iter = suspendings__.find(id);
-                    if (iter != suspendings__.end()) {
-                        auto promise = iter->second;
+                    auto promise = find(suspendings__, id, suspendingsMutex__);
+                    if (promise) {
                         suspendings__.erase(id);
 
-                        promise.resolved(body);
+                        promise->resolved(body);
                     }
                     else {
                         log__("DupeNukem: suprious message received: " + jsonString);
@@ -283,17 +367,16 @@ namespace DupeNukem
                 }
                 else if (type == "failed") {
                     log__(String("DupeNukem: failed: ") + id);
-                    auto iter = suspendings__.find(id);
-                    if (iter != suspendings__.end()) {
-                        auto promise = iter->second;
+                    auto promise = find(suspendings__, id, suspendingsMutex__);
+                    if (promise) {
                         suspendings__.erase(id);
 
-                        const auto name = body["name"].as<String>();
-                        const auto message = body["message"].as<String>();
-                        const auto detail = body["detail"].as<String>();
+                        const String& name = body["name"];
+                        const String& message = body["message"];
+                        const String& detail = body["detail"];
                         PeerInvocationException ex(name, message, detail);
 
-                        promise.rejected(ex);
+                        promise->rejected(ex);
                     }
                     else {
                         log__("DupeNukem: suprious message received: " + jsonString);
@@ -302,178 +385,110 @@ namespace DupeNukem
                 else if (type == "invoke")
                 {
                     try {
-                        const auto name = body["name"].as<String>();
-
+                        const String& name = body["name"];
                         log__("DupeNukem: invoke: " + name + "(...)");
-                        const ne = name.split(".");
-                        const ti = ne.
-                            slice(0, ne.length - 1).
-                            reduce(function(o, n) {
-                            if (o != undefined) {
-                                const next = o[n];
-                                if (next == undefined) {
-                                    this.sendExceptionToHost__(message, { name: "invalidFieldName", message : "Field \"" + n + "\" is not found.", detail : "", });
-                                }
-                                return next;
-                            }
-                            else {
-                                return o;
-                            }
-                        }, window);
-                        if (ti != undefined) {
-                            const fn = ne[ne.length - 1];
-                            const f = ti[fn];
-                            if (f == undefined) {
-                                this.sendExceptionToHost__(message, { name: "invalidFunctionName", message : "Function \"" + fn + "\" is not found.", detail : "", });
-                            }
-                            else {
-                                f.apply(ti, message.body.args).
-                                    then(result = > window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type : "succeeded", body : result, }))).
-                                    catch (e = > this.sendExceptionToHost__(message, { name: e.name, message : e.message, detail : e.toString(), }));
-                            }
+
+                        auto function = find(functions__, name, functionsMutex__);
+                        if (function) {
+                            const JsonArray& args = body["args"];
+
+                            (*function)(args).
+                                then([this, id](const JsonVariant& result) {
+                                jsonDocument_type messageJson;
+                                messageJson["body"] = result;
+                                sendMessageToHost(messageJson, id, "succeeded");
+                                    }).
+                                caught([this, id](const std::exception& ex) {
+                                        sendExceptionToHost(id, ex);
+                                    });
+                        }
+                        else {
+                            sendExceptionToHost(
+                                id,
+                                "invalidFunctionName",
+                                "Function \"" + name + "\" is not found.");
                         }
                     }
-                    catch (e) {
-                        this.sendExceptionToHost__(message, { name: e.name, message : e.message, detail : e.toString(), });
+                    catch (const std::exception& ex) {
+                        sendExceptionToHost(id, "exception", ex.what());
                     }
                 }
-                break;
-            case "control":
-                this.log__("DupeNukem: control: " + message.id + ": " + message.body);
-                switch (message.id) {
-                case "inject":
-                    this.injectProxy__(message.body);
-                    break;
-                case "delete":
-                    this.deleteProxy__(message.body);
-                    break;
-                }
-                break;
+            }
+            catch (const std::exception& ex) {
+                log__(String("DupeNukem: unknown error: ") + ex.what() + ": " + jsonString);
             }
         }
-        catch (e) {
-            console.warn("DupeNukem: unknown error: " + e.message + ": " + jsonString);
-        }
-    };
 
-    this.invokeHostMethod__ = (name, args) = > {
-        return new Promise((resolve, reject) = > {
-            const id = "client_" + (this.id__++);
+    public:
+        Messenger__(
+            const log_type& log,
+            const sendToHostMessage_type& sendToHostMessage) :
+            log__(log), sendToHostMessage__(sendToHostMessage) {
+            jsonDocument_type messageJson;
+            messageJson.createNestedObject("body");
+
+            sendMessageToHost(messageJson, "ready", "control");
+
+            log__("DupeNukem: Ready by host managed.");
+        }
+
+        void registerFunction(const char* pName, const function_type& function) {
+            locker_type locker(functionsMutex__);
+            functions__[pName] = function;
+        }
+
+        void unregisterFunction(const char* pName) {
+            locker_type locker(functionsMutex__);
+            functions__.erase(pName);
+        }
+
+        promise_type invokeHostMethod(const char* pMethodName, const JsonArray& args) {
+            promise_type promise;
+
+            String id = "client_";
+            id += id__++;
+
+            {
+                locker_type locker(suspendingsMutex__);
+                suspendings__[id] = promise;
+            }
+
+            jsonDocument_type messageJson;
+            auto body = messageJson.createNestedObject("body");
+            body["name"] = pMethodName;
+            body["args"] = args;
+
             try {
-                const descriptor = { resolve: resolve, reject : reject, };
-                this.suspendings__.set(id, descriptor);
-                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type : "invoke", body : { name: name, args : args, }, }));
+                sendMessageToHost(messageJson, id, "invoke");
             }
-            catch (e) {
-                reject(e);
+            catch (const std::exception& ex) {
+                promise.rejected(ex);
             }
-        });
+
+            return promise;
+        }
     };
 
-    this.getScopedElement__ = (names) = > {
-        let current = window;
-        for (const name of names.slice(0, names.length - 1)) {
-            let next = current[name];
-            if (next == undefined) {
-                next = new Object();
-                Object.defineProperty(current, name, {
-                    value: next,
-                    writable : false,
-                    enumerable : true,
-                    configurable : true,
-                    });
-            }
-            current = next;
+    //////////////////////////////////////////////////////////
+
+    // For ArduinoJson
+    class DefaultAllocator
+    {
+    public:
+        void* allocate(size_t size) {
+            return malloc(size);
         }
-        return current;
+
+        void deallocate(void* ptr) {
+            free(ptr);
+        }
+
+        void* reallocate(void* ptr, size_t new_size) {
+            return realloc(ptr, new_size);
+        }
     };
 
-    this.injectProxy__ = (entry) = > {
-        const name = entry.name;
-
-        const ne = name.split(".");
-        const fn = ne[ne.length - 1];
-
-        let current = window;
-        for (const name of ne.slice(0, ne.length - 1)) {
-            let next = current[name];
-            if (next == undefined) {
-                next = new Object();
-                Object.defineProperty(current, name, {
-                    value: next,
-                    writable : false,
-                    enumerable : true,
-                    configurable : true,
-                    });
-            }
-            current = next;
-        }
-
-        Object.defineProperty(current, fn, {
-            value: window.__dupeNukem_invokeHostMethod__.bind(current, entry),
-            writable : false,
-            enumerable : true,
-            configurable : true,
-            });
-    };
-
-    this.deleteProxy__ = (name) = > {
-        const ne = name.split(".");
-        const fn = ne[ne.length - 1];
-
-        let current = window;
-        for (const name of ne.slice(0, ne.length - 1)) {
-            let next = current[name];
-            if (next == undefined) {
-                return;
-            }
-            current = next;
-        }
-
-        delete current[fn];
-    }
-
-    if (window.external != undefined &&
-        window.external.notify != undefined) {
-        window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
-        console.info("DupeNukem: Microsoft WebView1 detected.");
-    }
-    else if (window.chrome != undefined &&
-        window.chrome.webview != undefined &&
-        window.chrome.webview.postMessage != undefined) {
-        window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
-        window.chrome.webview.addEventListener(
-            "message", e = > { this.arrivedHostMesssage__(e.data); });
-        console.info("DupeNukem: Microsoft WebView2 detected.");
-    }
-    else if (window.CefSharp != undefined &&
-        window.CefSharp.PostMessage != undefined) {
-        window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
-        console.info("DupeNukem: CefSharp detected.");
-    }
-    else if (window.__dupeNukem_Messenger_sendToHostMessage__ != undefined) {
-        console.info("DupeNukem: Ready to host managed.");
-    }
-
-public:
-    Messenger(
-        const log_type& log,
-        const sendToHostMessage_type& sendToHostMessage) :
-        log__(log), sendToHostMessage__(sendToHostMessage) {
-
-        StaticJsonDocument<50> message;
-        message["id"] = "ready";
-        message["type"] = "control";
-        message["body"] = nullptr;
-
-        String messageString;
-        serializeJson(messageJson, messageString);
-
-        sendToHostMessage__(messageString);
-
-        log__("DupeNukem: Ready by host managed.");
-    }
-};
+    using Messenger = Messenger__<DefaultAllocator>;
 }
 
 #endif

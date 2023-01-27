@@ -225,6 +225,96 @@ It is limitation for JavaScript specification.
 
 ----
 
+## Exception
+
+DupeNukem can propagate exceptions to each other as exceptions without having to do anything.
+.NET and JavaScript, however, have different ways of expressing exceptions.
+
+When an exception is raised on .NET:
+
+```csharp
+public Task foo()
+{
+    throw new ArgumentException("bar");
+}
+```
+
+```javascript
+try {
+    dotnet.foo();
+}
+catch (e) {    // <-- Error object
+    console.log(e.name + ": " + e.message);
+    // console.log(e.detail)
+}
+```
+
+When an exception is raised on JavaScript:
+
+```javascript
+async foo() {
+    throw new Error("foo");
+}
+```
+
+```csharp
+try
+{
+    await js.foo();
+}
+catch (PeerInvocationException ex)
+{
+    Console.WriteLine(ex.Message);
+    // Console.WriteLine(ex.Detail);
+}
+```
+
+The differences are shown below:
+
+* .NET exception class and does not create an exception object on the JavaScript side with the same name.
+  On the JavaScript side, `Error` object is always thrown.
+* On the JavaScript side, you can refer to the type name by `Error.name`.
+* You can refer to the message (`Exception.Message` property) by `Error.message`.
+* On the .NET side, an instance of the `PeerInvocationException` class is always thrown.
+* .NET exception stack traces are not combined by default on the JavaScript side.
+  Because .NET side and JavaScript side stack traces are different, so cannot be combined.
+  However, by setting `Messenger.SendExceptionWithStackTrace` to `true`,
+  .NET stack trace as a string to the JavaScript side.
+  This value is `false` by default, for safety reasons.
+  The stack trace is stored in `Error.detail`.
+* Similarly, the stack trace on the JavaScript side cannot be combined on the .NET.
+  Combined when be provided by the hosted JavaScript engine.
+
+Additional information can be placed in the exception, but there are conditions for propagating this information:
+
+* Valid only for .NET exception classes.
+* The `ExceptionProperty` attribute must be applied.
+
+```csharp
+public class FooException : Exception
+{
+    // JavaScript側に伝搬する付加情報を示すメンバー
+    [ExceptionProperty]
+    public int StatusCode { get; }
+
+    public FooException(int statusCode, string message) :
+        base(message) =>
+        this.StatusCode = statusCode;
+}
+
+```javascript
+try {
+    dotnet.foo();
+}
+catch (e) {
+    console.log(e.props.statusCode);
+}
+```
+
+On the JavaScript side, you can access `Error.props` as above to get the relevant additional information.
+
+----
+
 ## Cancellation
 
 .NET has the `CancellationToken` type as the standard infrastructure for
@@ -443,6 +533,9 @@ Apache-v2.
 
 ## History
 
+* 0.21.0:
+  * Added `ExceptionProperty` attribute.
+  * Downgraded XF's package to baseline.
 * 0.20.0:
   * Removed obsoleted fragments.
 * 0.19.0:

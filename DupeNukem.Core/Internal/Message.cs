@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace DupeNukem.Internal
@@ -69,13 +70,18 @@ namespace DupeNukem.Internal
         public readonly string Message;
         [JsonProperty("detail")]
         public readonly string Detail;
+        [JsonProperty("props")]
+        public readonly Dictionary<string, object?> Properties;
 
         [JsonConstructor]
-        public ExceptionBody(string name, string message, string detail)
+        public ExceptionBody(
+            string name, string message, string detail,
+            Dictionary<string, object?> properties)
         {
             this.Name = name;
             this.Message = message;
             this.Detail = detail;
+            this.Properties = properties;
         }
     }
 

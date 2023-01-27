@@ -89,5 +89,27 @@ namespace DupeNukem.ViewModels
             await Task.Delay(100);
             return a * b;
         }
+
+        [CallableTarget]
+        public async Task<int> willBeThrowAsync(int a, int b)
+        {
+            await Task.Delay(100);
+            throw new WillBeThrowException(a, b);
+        }
+    }
+
+    public sealed class WillBeThrowException : Exception
+    {
+        [ExceptionProperty]
+        public readonly int A;
+
+        [ExceptionProperty]
+        public int B { get; }
+
+        public WillBeThrowException(int a, int b)
+        {
+            this.A = a;
+            this.B = b;
+        }
     }
 }

@@ -76,6 +76,7 @@ var __dupeNukem_Messenger__ =
                         const e = new Error(message.body.message);
                         e.name = message.body.name;
                         e.detail = message.body.detail;
+                        e.props = message.body.props;
                         failureDescriptor.reject(e);
                     }
                     else {

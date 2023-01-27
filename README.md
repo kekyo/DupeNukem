@@ -535,6 +535,7 @@ Apache-v2.
 
 * 0.21.0:
   * Added `ExceptionProperty` attribute.
+  * Downgraded XF's package to baseline.
 * 0.20.0:
   * Removed obsoleted fragments.
 * 0.19.0:

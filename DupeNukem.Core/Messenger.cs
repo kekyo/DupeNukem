@@ -76,7 +76,7 @@ namespace DupeNukem
                 DateTimeZoneHandling = DateTimeZoneHandling.Local,
                 NullValueHandling = NullValueHandling.Include,
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
-                ContractResolver = new DefaultContractResolver { NamingStrategy = defaultNamingStrategy, },
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
             };
             serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
             serializer.Converters.Add(new CancellationTokenConverter());
@@ -351,7 +351,8 @@ namespace DupeNukem
                             var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
                             try
                             {
-                                throw new PeerInvocationException(error.Name, error.Message, error.Detail);
+                                throw new PeerInvocationException(
+                                    error.Name, error.Message, error.Detail);
                             }
                             catch (Exception ex)
                             {
@@ -392,16 +393,23 @@ namespace DupeNukem
                                 var responseBody = new ExceptionBody(
                                     "InvalidMethodName",
                                     $"Method '{body.Name}' is not found.",
-                                    string.Empty);
+                                    string.Empty,
+                                    new());
 
                                 this.SendExceptionMessageToPeer(message, responseBody);
                             }
                         }
                         catch (Exception ex)
                         {
+                            var props = Utilities.ExtractExceptionProperties(
+                                ex, this.MemberAccessNamingStrategy);
+
                             var responseBody = new ExceptionBody(
                                 ex.GetType().FullName!, ex.Message,
-                                this.SendExceptionWithStackTrace ? (ex.StackTrace ?? string.Empty) : string.Empty);
+                                this.SendExceptionWithStackTrace ?
+                                    (ex.StackTrace ?? string.Empty) :
+                                    string.Empty,
+                                props);
 
                             this.SendExceptionMessageToPeer(message, responseBody);
                         }

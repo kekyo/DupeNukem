@@ -252,6 +252,16 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  const result_calc_mul = await calc.mul(2, 3);");
             script.AppendLine("  console.log('calc.mul: ' + result_calc_mul);");
 
+            script.AppendLine("  try {");
+            script.AppendLine("    await calc.willBeThrow(1, 2);");
+            script.AppendLine("    console.log('BUG detected [calc.willBeThrow, 1]');");
+            script.AppendLine("  } catch (e) {");
+            script.AppendLine("    if (e.props.a == 1 && e.props.b == 2)");
+            script.AppendLine("      console.log('PASS: Will be throw [calc.willBeThrow]');");
+            script.AppendLine("    else");
+            script.AppendLine("      console.log('BUG detected [calc.willBeThrow, 2]');");
+            script.AppendLine("  }");
+
             script.AppendLine("  console.log('ALL TEST IS DONE AT JavaScript SIDE.');");
 
             script.AppendLine("}");

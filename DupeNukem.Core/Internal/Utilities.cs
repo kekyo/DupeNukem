@@ -24,6 +24,7 @@ namespace DupeNukem.Internal
     public static class Utilities
     {
         private static readonly Dictionary<Type, object?> defaultValues = new();
+        private static readonly Dictionary<Type, Func<Exception, Dictionary<string, object?>>> exceptionPropertiesGetters = new();
 
         private abstract class DefaultValue
         {
@@ -49,6 +50,28 @@ namespace DupeNukem.Internal
                 return value;
             }
         }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        internal static bool IsNullOrWhitespace(string? str) =>
+#if NET35
+            string.IsNullOrEmpty(str?.Trim());
+#else
+            string.IsNullOrWhiteSpace(str);
+#endif
+
+#if NET35 || NET40 || NET45 || NET451 || NET452
+        private static class ArrayEmpty<T>
+        {
+            public static readonly T[] Empty = new T[0];
+        }
+
+        internal static T[] Empty<T>() =>
+            ArrayEmpty<T>.Empty;
+#else
+        internal static T[] Empty<T>() =>
+            Array.Empty<T>();
+#endif
 
         ///////////////////////////////////////////////////////////////////////////////
 
@@ -275,6 +298,19 @@ namespace DupeNukem.Internal
             }
         }
 
+        internal static IEnumerable<TResult> Collect<TItem, TResult>(
+            this IEnumerable<TItem> enumerable,
+            Func<TItem, TResult?> selector)
+        {
+            foreach (var item in enumerable)
+            {
+                if (selector(item) is { } value)
+                {
+                    yield return value;
+                }
+            }
+        }
+
         ///////////////////////////////////////////////////////////////////////////////
 
         internal static Task CompletedTask =>
@@ -413,6 +449,105 @@ namespace DupeNukem.Internal
 
             public void GetResult() =>
                 Debug.Assert(this.IsCompleted);
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        private sealed class MemberNameComparer : IEqualityComparer<MemberInfo>
+        {
+            public bool Equals(MemberInfo? x, MemberInfo? y) =>
+                x!.Name == y!.Name;
+
+            public int GetHashCode(MemberInfo obj) =>
+                obj.Name.GetHashCode();
+
+            public static readonly MemberNameComparer Instance = new();
+        }
+
+        internal static Dictionary<string, object?> ExtractExceptionProperties(
+            Exception ex, NamingStrategy namingStrategy)
+        {
+            var type = ex.GetType();
+
+            Func<Exception, Dictionary<string, object?>> getter;
+            lock (exceptionPropertiesGetters)
+            {
+                if (!exceptionPropertiesGetters.TryGetValue(type, out getter!))
+                {
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+                    var memberGetters = type.GetTypeInfo().
+                        Traverse(t => t.BaseType?.GetTypeInfo()).
+                        SelectMany(t => t.DeclaredMembers).
+                        Distinct(MemberNameComparer.Instance).
+                        Where(m =>
+                            ((m is FieldInfo { } f && !f.IsStatic) ||
+                             (m is PropertyInfo { } p && p.GetMethod is { } gm && !gm.IsStatic && p.GetIndexParameters().Length == 0)) &&
+                            m.IsDefined(typeof(ExceptionPropertyAttribute), true)).
+                        Collect(m =>
+                        {
+                            try
+                            {
+                                return new
+                                {
+                                    name = m.GetCustomAttribute(typeof(ExceptionPropertyAttribute), true) is ExceptionPropertyAttribute epa ?
+                                        (IsNullOrWhitespace(epa.Name) ?
+                                            namingStrategy.GetPropertyName(m.Name, false) :
+                                            namingStrategy.GetPropertyName(epa.Name!, true)) :
+                                        namingStrategy.GetPropertyName(m.Name, false),
+                                    getter = m is FieldInfo f ?
+                                        new Func<Exception, object?>(ex => f.GetValue(ex)) :
+                                        new Func<Exception, object?>(ex => ((PropertyInfo)m).GetValue(ex, Empty<object>()))
+                                };
+                            }
+                            catch
+                            {
+                                return null;
+                            }
+                        }).
+                        ToDictionary(entry => entry.name, entry => entry.getter);
+#else
+                    var memberGetters = type.
+                        Traverse(t => t.BaseType).
+                        SelectMany(t => t.GetMembers(
+                            BindingFlags.Public | BindingFlags.NonPublic |
+                            BindingFlags.Instance | BindingFlags.DeclaredOnly)).
+                        Distinct(MemberNameComparer.Instance).
+                        Where(m =>
+                            (m is FieldInfo ||
+                             (m is PropertyInfo { } p && p.GetIndexParameters().Length == 0)) &&
+                            m.IsDefined(typeof(ExceptionPropertyAttribute), true)).
+                        Collect(m =>
+                        {
+                            try
+                            {
+                                return new
+                                {
+                                    name = m.GetCustomAttributes(true).
+                                        OfType<ExceptionPropertyAttribute>().
+                                        FirstOrDefault() is { } epa ?
+                                            (IsNullOrWhitespace(epa.Name) ?
+                                                namingStrategy.GetPropertyName(m.Name, false) :
+                                                namingStrategy.GetPropertyName(epa.Name!, true)) :
+                                            namingStrategy.GetPropertyName(m.Name, false),
+                                    getter = m is FieldInfo f ?
+                                        new Func<Exception, object?>(ex => f.GetValue(ex)) :
+                                        new Func<Exception, object?>(ex => ((PropertyInfo)m).GetValue(ex, Empty<object>()))
+                                };
+                            }
+                            catch
+                            {
+                                return null;
+                            }
+                        }).
+                        ToDictionary(entry => entry.name, entry => entry.getter);
+#endif
+                    getter = ex => memberGetters.
+                        ToDictionary(mg => mg.Key, mg => mg.Value(ex));
+                    exceptionPropertiesGetters.Add(type, getter);
+                }
+            }
+
+            return getter(ex);
         }
     }
 }

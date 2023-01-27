@@ -13,12 +13,6 @@ DupeNukem - WebView attachable full-duplex asynchronous interoperable independen
 |DupeNukem|[![NuGet DupeNukem](https://img.shields.io/nuget/v/DupeNukem.svg?style=flat)](https://www.nuget.org/packages/DupeNukem)|
 |DupeNukem.Core|[![NuGet DupeNukem.Core](https://img.shields.io/nuget/v/DupeNukem.Core.svg?style=flat)](https://www.nuget.org/packages/DupeNukem.Core)|
 
-## CI
-
-|main|develop|
-|:--|:--|
-|[![DupeNukem CI build (main)](https://github.com/kekyo/DupeNukem/workflows/.NET/badge.svg?branch=main)](https://github.com/kekyo/DupeNukem/actions?query=branch%3Amain)|[![DupeNukem CI build (develop)](https://github.com/kekyo/DupeNukem/workflows/.NET/badge.svg?branch=develop)](https://github.com/kekyo/DupeNukem/actions?query=branch%3Adevelop)|
-
 ----
 
 ## What is this?
@@ -293,7 +287,7 @@ Additional information can be placed in the exception, but there are conditions 
 ```csharp
 public class FooException : Exception
 {
-    // JavaScript側に伝搬する付加情報を示すメンバー
+    // Indicating additional information to the JavaScript side.
     [ExceptionProperty]
     public int StatusCode { get; }
 
@@ -535,7 +529,6 @@ Apache-v2.
 
 * 0.21.0:
   * Added `ExceptionProperty` attribute.
-  * Downgraded XF's package to baseline.
 * 0.20.0:
   * Removed obsoleted fragments.
 * 0.19.0:

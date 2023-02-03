@@ -413,7 +413,8 @@ There are examples for gluing sample code between your app and browser component
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
-    webView2.CoreWebView2.PostWebMessageAsString(e.Message);
+    Dispatcher.CurrentDispatcher.Invoke(() =>
+        webView2.CoreWebView2.PostWebMessageAsString(e.JsonString));
 
 // Step 3: Hook up JavaScript --> .NET message handler.
 var serializer = Messenger.GetDefaultJsonSerializer();
@@ -439,8 +440,9 @@ await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
-    cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-        e.ToJavaScript());
+    Dispatcher.CurrentDispatcher.Invoke(() =>
+        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+            e.ToJavaScript()));
 
 // Step 3: Attached JavaScript --> .NET message handler.
 cefSharp.JavascriptMessageReceived += (s, e) =>
@@ -472,7 +474,8 @@ Here is an example of using this package:
 
 // Step 2: Hook up .NET --> JavaScript message handler.
 messenger.SendRequest += (s, e) =>
-    formsWebView.InjectJavascriptAsync(e.ToJavaScript());
+    Application.Current.Dispatcher.BeginInvokeOnMainThread(() =>
+        formsWebView.InjectJavascriptAsync(e.ToJavaScript()));
 
 // Step 3: Attached JavaScript --> .NET message handler.
 formsWebView.AddLocalCallback(

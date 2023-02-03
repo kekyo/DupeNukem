@@ -406,7 +406,7 @@ and will not work if called using the `invokeHostMethod()` function.
 
 There are examples for gluing sample code between your app and browser components.
 
-### Edge WebView2
+### Edge WebView2 (on WPF)
 
 ```csharp
 // WebView2 webView2;
@@ -433,7 +433,19 @@ await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
     messenger.GetInjectionScript().ToString());
 ```
 
-### CefSharp
+### Edge WebView2 (on Windows Forms)
+
+The only difference between Windows Forms and WPF is
+the marshalling method to the main thread.
+
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += (s, e) =>
+    this.Invoke(() =>
+        webView2.CoreWebView2.PostWebMessageAsString(e.JsonString));
+```
+
+### CefSharp (on WPF)
 
 ```csharp
 // ChromiumWebBrowser cefSharp;

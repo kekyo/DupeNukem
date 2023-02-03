@@ -34,7 +34,7 @@ namespace DupeNukem.ViewModels
         {
             // Step 1: Construct DupeNukem Messenger.
             var messenger = new WebViewMessenger();
-            this.HookWithMessengerTestCode(messenger);   // FOR TEST
+            HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 
             // ContentPage.Appearing:
@@ -46,8 +46,15 @@ namespace DupeNukem.ViewModels
                     // Bound between CefSharp and DupeNukem Messenger.
 
                     // Step 2: Hook up .NET --> JavaScript message handler.
-                    messenger.SendRequest += (s, e) =>
-                        formsWebView.InjectJavascriptAsync(e.ToJavaScript());
+                    messenger.SendRequest += async (s, e) =>
+                    {
+                        // Marshal to main thread.
+                        if (await UIThread.TryBind())
+                        {
+                            Application.Current.Dispatcher.BeginInvokeOnMainThread(() =>
+                                formsWebView.InjectJavascriptAsync(e.ToJavaScript()));
+                        }
+                    };
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     formsWebView.AddLocalCallback(
@@ -56,7 +63,7 @@ namespace DupeNukem.ViewModels
 
                     // Step 4: Injected Messenger script.
                     var script = messenger.GetInjectionScript(true);
-                    this.AddJavaScriptTestCode(script);   // FOR TEST
+                    AddJavaScriptTestCode(script);   // FOR TEST
                     formsWebView.OnNavigationCompleted += (s, url) =>
                     {
                         if (url == formsWebView.Source)
@@ -112,15 +119,16 @@ namespace DupeNukem.ViewModels
             });
         }
 
+        /////////////////////////////////////////////////////////////////////////
+        // For test
+
         public async Task<int> Add(int a, int b) { await Task.Delay(100); return a + b; }
         public async Task<int> Sub(int a, int b) { await Task.Delay(100); return a - b; }
         public async Task<int> FromEnum(ConsoleKey key) { await Task.Delay(100); return (int)key; }
         public async Task<ConsoleKey> ToEnum(int key) { await Task.Delay(100); return (ConsoleKey)key; }
         public async Task<ConsoleKey[]> Array(ConsoleKey[] keys) { await Task.Delay(100); return keys; }
 
-        /////////////////////////////////////////////////////////////////////////
-
-        private void HookWithMessengerTestCode(WebViewMessenger messenger)
+        private static void HookWithMessengerTestCode(WebViewMessenger messenger)
         {
             // ---- Test code fragments: Will be invoke when Messenger script is loaded.
             messenger.Ready += async (s, e) =>
@@ -158,7 +166,7 @@ namespace DupeNukem.ViewModels
             };
         }
 
-        private void AddJavaScriptTestCode(StringBuilder script)
+        private static void AddJavaScriptTestCode(StringBuilder script)
         {
             // ---- Added more JavaScript test code fragments:
             // You can verify on the developer tooling window,

@@ -18,6 +18,13 @@ var __dupeNukem_Messenger__ =
     this.debugLog__ = false;
     this.isInitialized__ = false;
 
+    this.registry__ = new FinalizationRegistry(name => {
+        if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+            window.__dupeNukem_Messenger_sendToHostMessage__(
+                JSON.stringify({ id: "discard", type: "closure", body: name, }));
+        }
+    });
+
     this.log__ = (message) => {
         if (this.debugLog__) {
             console.log(message);
@@ -112,14 +119,17 @@ var __dupeNukem_Messenger__ =
                                     arg => {
                                         if (arg == null) {
                                             return null;
-                                        } else if (arg.type == "closure$" && arg.id != undefined) {
-                                            return function () {
+                                        } else if (arg.id == "descriptor" && arg.type == "closure" && arg.body?.startsWith("closure_$")) {
+                                            const name = arg.body;
+                                            const cb = function () {
                                                 const args = new Array(arguments.length);
                                                 for (let i = 0; i < args.length; i++) {
                                                     args[i] = arguments[i];
                                                 }
-                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(arg.id, args);
+                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
                                             };
+                                            this.registry__.register(cb, name);
+                                            return cb;
                                         } else {
                                             return arg;
                                         }

@@ -26,6 +26,7 @@ namespace DupeNukem.Internal
         Succeeded,
         Failed,
         Invoke,
+        Closure,
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -44,20 +45,6 @@ namespace DupeNukem.Internal
             this.Id = id;
             this.Type = type;
             this.Body = body;
-        }
-    }
-
-    internal readonly struct ClosureFunctionDescriptor
-    {
-        [JsonProperty("type")]
-        public readonly string Type = "closure$";
-        [JsonProperty("id")]
-        public readonly string Id;
-
-        [JsonConstructor]
-        public ClosureFunctionDescriptor(string id)
-        {
-            this.Id = id;
         }
     }
 

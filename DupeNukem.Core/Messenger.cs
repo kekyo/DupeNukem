@@ -250,7 +250,10 @@ namespace DupeNukem
                         new DynamicFunctionDescriptor(closure, this),
                         true);
                     return JToken.FromObject(
-                        new ClosureFunctionDescriptor(id),
+                        new Message(
+                            "descriptor",
+                            MessageTypes.Closure,
+                            JToken.FromObject(id, this.Serializer)),
                         this.Serializer);
                 default:
                     return JToken.FromObject(
@@ -453,6 +456,13 @@ namespace DupeNukem
                                 props);
 
                             this.SendExceptionMessageToPeer(message, responseBody);
+                        }
+                        break;
+
+                    case MessageTypes.Closure:
+                        {
+                            var name = message.Body!.ToObject<string>(this.Serializer)!;
+                            this.methods.SafeRemove(name);
                         }
                         break;
                 }

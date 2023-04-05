@@ -157,11 +157,7 @@ namespace DupeNukem
                     oas.FirstOrDefault() :
                     null);
         private static MethodMetadata GetMetadata(bool isProxyInjecting, Delegate dlg) =>
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-            GetMetadata(isProxyInjecting, dlg.GetMethodInfo());
-#else
-            GetMetadata(isProxyInjecting, dlg.Method);
-#endif
+            GetMetadata(isProxyInjecting, dlg.GetMethodInfo()!);
 
         public static string RegisterDynamicMethod(
             this IMessenger messenger, Delegate method) =>

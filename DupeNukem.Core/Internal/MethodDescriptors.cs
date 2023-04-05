@@ -352,11 +352,7 @@ namespace DupeNukem.Internal
         {
             this.method = method;
             this.parameterTypes =
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-                this.method.GetMethodInfo().
-#else
-                this.method.Method.
-#endif
+                this.method.GetMethodInfo()!.
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();
@@ -387,11 +383,7 @@ namespace DupeNukem.Internal
         {
             this.method = method;
             this.parameterTypes =
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-                this.method.GetMethodInfo().
-#else
-                this.method.Method.
-#endif
+                this.method.GetMethodInfo()!.
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();
@@ -408,6 +400,38 @@ namespace DupeNukem.Internal
             var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
                 ConfigureAwait(false);
             return result;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class DynamicFunctionDescriptor : MethodDescriptor
+    {
+        private readonly Delegate function;
+        private readonly Type[] parameterTypes;
+
+        public DynamicFunctionDescriptor(
+            Delegate function, IMessenger messenger) :
+            base(messenger, new(false, null))
+        {
+            this.function = function;
+            this.parameterTypes =
+                this.function.GetMethodInfo()!.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            var task = (Task)this.function.DynamicInvoke(cas)!;
+            return await TaskResultGetter.GetResultAsync(task);
         }
     }
 }

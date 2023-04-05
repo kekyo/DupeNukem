@@ -47,6 +47,20 @@ namespace DupeNukem.Internal
         }
     }
 
+    internal readonly struct ClosureFunctionDescriptor
+    {
+        [JsonProperty("type")]
+        public readonly string Type = "closure$";
+        [JsonProperty("id")]
+        public readonly string Id;
+
+        [JsonConstructor]
+        public ClosureFunctionDescriptor(string id)
+        {
+            this.Id = id;
+        }
+    }
+
     internal readonly struct InvokeBody
     {
         [JsonProperty("name")]

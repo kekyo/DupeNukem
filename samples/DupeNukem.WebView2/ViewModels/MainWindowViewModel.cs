@@ -166,6 +166,12 @@ namespace DupeNukem.ViewModels
                     Trace.WriteLine("PASS: Unknown function invoking [unknown]");
                 }
 
+                // Test JavaScript --> .NET methods with callback
+                Func<int, int, Task<string>> callback = (a, b) =>
+                    Task.FromResult((a + b).ToString());
+                var result_callback = await messenger.InvokePeerMethodAsync<string>("js_callback", 1, 2, callback);
+                Trace.WriteLine($"js_callback: {result_callback}");
+
                 Trace.WriteLine("ALL TEST IS DONE AT .NET SIDE.");
             };
         }
@@ -181,6 +187,7 @@ namespace DupeNukem.ViewModels
             script.AppendLine("async function js_enum1(a) { console.log('js_enum1(' + a + ')'); return 'Print'; }");
             script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
             script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
+            script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
 
             // Invoke JavaScript --> .NET methods:
             script.AppendLine("var tester = async () => {");

@@ -108,7 +108,23 @@ var __dupeNukem_Messenger__ =
                                 this.sendExceptionToHost__(message, { name: "invalidFunctionName", message: "Function \"" + fn + "\" is not found.", detail: "", });
                             }
                             else {
-                                f.apply(ti, message.body.args).
+                                const args = message.body.args.map(
+                                    arg => {
+                                        if (arg == null) {
+                                            return null;
+                                        } else if (arg.type == "closure$" && arg.id != undefined) {
+                                            return function () {
+                                                const args = new Array(arguments.length);
+                                                for (let i = 0; i < args.length; i++) {
+                                                    args[i] = arguments[i];
+                                                }
+                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(arg.id, args);
+                                            };
+                                        } else {
+                                            return arg;
+                                        }
+                                    });
+                                f.apply(ti, args).
                                     then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
                                     catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }

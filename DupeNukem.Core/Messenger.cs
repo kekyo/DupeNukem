@@ -20,6 +20,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -223,10 +224,50 @@ namespace DupeNukem
             }
         }
 
+        private void ValidateArgumentType(object? arg)
+        {
+            if (arg is Delegate closure)
+            {
+                var mi = closure.GetMethodInfo()!;
+                if (!typeof(Task).IsAssignableFrom(mi.ReturnType))
+                {
+                    throw new JsonSerializationException(
+                        $"Could not serialize the delegate. Return type is not Task type.");
+                }
+            }
+        }
+
+        private JToken? SerializeArgument(object? arg)
+        {
+            switch (arg)
+            {
+                case null:
+                    return null;
+                case Delegate closure:
+                    var id = "closure_$" + Interlocked.Increment(ref this.id);
+                    this.RegisterMethod(
+                        id,
+                        new DynamicFunctionDescriptor(closure, this),
+                        true);
+                    return JToken.FromObject(
+                        new ClosureFunctionDescriptor(id),
+                        this.Serializer);
+                default:
+                    return JToken.FromObject(
+                        arg,
+                        this.Serializer);
+            }
+        }
+
         private void SendInvokeMessageToPeer(
             SuspendingDescriptor descriptor, CancellationToken ct,
             string functionName, object?[] args)
         {
+            foreach (var arg in args)
+            {
+                this.ValidateArgumentType(arg);
+            }
+
             lock (this.timeoutQueue)
             {
                 this.timeoutQueue.Enqueue(new WeakReference(descriptor));
@@ -249,7 +290,7 @@ namespace DupeNukem
 
             var body = new InvokeBody(
                 functionName,
-                args.Select(arg => arg != null ? JToken.FromObject(arg, this.Serializer) : null).
+                args.Select(this.SerializeArgument).
                 ToArray());
             var request = new Message(
                 id,

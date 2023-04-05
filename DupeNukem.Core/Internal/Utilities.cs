@@ -225,6 +225,18 @@ namespace DupeNukem.Internal
             }
         }
 
+#if NET35 || NET40
+        internal static MethodInfo GetMethodInfo(
+            this Delegate d) =>
+            d.Method;
+#endif
+
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+        internal static bool IsAssignableFrom(
+            this Type type, Type rhs) =>
+            type.GetTypeInfo().IsAssignableFrom(rhs.GetTypeInfo());
+#endif
+
         internal static IEnumerable<MethodEntry> EnumerateTargetMethods(
             object target, bool isFullName, NamingStrategy memberAccessNamingStrategy) =>
             target.GetType().

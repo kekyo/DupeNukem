@@ -59,6 +59,16 @@ namespace DupeNukem.Internal
             }
         }
 
+        public void ForceClear()
+        {
+            lock (this.objects)
+            {
+                this.timer.Change(0, 0);
+                this.objects.Clear();
+                this.waitForCollectedThreshold = false;
+            }
+        }
+
         private void Collect()
         {
             var targetKeys = this.objects.Keys.

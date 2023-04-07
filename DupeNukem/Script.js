@@ -22,6 +22,7 @@ var __dupeNukem_Messenger__ =
         if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
             window.__dupeNukem_Messenger_sendToHostMessage__(
                 JSON.stringify({ id: "discard", type: "closure", body: name, }));
+            this.log__("DupeNukem: Sent discarded closure function: " + name);
         }
     });
 
@@ -163,7 +164,7 @@ var __dupeNukem_Messenger__ =
                             if (message.body.startsWith("__peerClosures__.closure_$")) {
                                 const baseName = message.body.substring(17);
                                 delete window.__peerClosures__[baseName];
-                                this.log__("Detected abandoned peer closure: " + baseName);
+                                this.log__("DupeNukem: Deleted peer closure target function: " + baseName);
                             }
                             break;
                     }

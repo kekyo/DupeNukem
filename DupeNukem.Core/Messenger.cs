@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -116,6 +115,8 @@ namespace DupeNukem
                 this.Serializer.Serialize(tw, request);
 
                 this.SendMessageToPeer(tw.ToString());
+
+                Trace.WriteLine($"DupeNukem: Sent discarded closure delegate: {name}");
             });
         }
 
@@ -207,6 +208,8 @@ namespace DupeNukem
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         protected void CancelAllSuspending()
         {
+            this.peerClosureRegistry.ForceClear();
+
             lock (this.timeoutQueue)
             {
                 while (this.timeoutQueue.Count >= 1)
@@ -516,7 +519,7 @@ namespace DupeNukem
                                 message.Body!.ToObject<string>(this.Serializer) is { } name &&
                                 name.StartsWith("closure_$"):
                                     this.methods.SafeRemove(name);
-                                    Trace.WriteLine($"DupeNukem: Detected abandoned peer closure: {name}");
+                                    Trace.WriteLine($"DupeNukem: Deleted peer closure target delegate: {name}");
                                     break;
                         }
                         break;

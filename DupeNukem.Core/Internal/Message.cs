@@ -26,6 +26,7 @@ namespace DupeNukem.Internal
         Succeeded,
         Failed,
         Invoke,
+        Closure,
     }
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]

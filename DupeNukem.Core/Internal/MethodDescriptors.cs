@@ -50,9 +50,38 @@ namespace DupeNukem.Internal
         public abstract Task<object?> InvokeAsync(JToken?[] args);
 
         protected T ToObject<T>(JToken? arg) =>
-            (arg != null) ? arg.ToObject<T>(this.messenger.Serializer)! : default(T)!;
+            arg switch
+            {
+                // Null.
+                null => default!,
+                // Function closure comes from JavaScript.
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(typeof(T)) =>
+                        (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
+                // Other value types.
+                _ => arg.ToObject<T>(this.messenger.Serializer)!,
+            };
+
         protected object? ToObject(JToken? arg, Type type) =>
-            (arg != null) ? arg.ToObject(type, this.messenger.Serializer) : Utilities.GetDefaultValue(type);
+            arg switch
+            {
+                // Null.
+                null => default!,
+                // Function closure comes from JavaScript.
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(type) =>
+                        this.messenger.RegisterPeerClosure(name, type),
+                // Other value types.
+                _ => arg.ToObject(type, this.messenger.Serializer)!,
+            };
 
         protected void BeginCapturingArguments() =>
             DeserializingRegisteredObjectRegistry.Begin();
@@ -352,11 +381,7 @@ namespace DupeNukem.Internal
         {
             this.method = method;
             this.parameterTypes =
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-                this.method.GetMethodInfo().
-#else
-                this.method.Method.
-#endif
+                this.method.GetMethodInfo()!.
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();
@@ -387,11 +412,7 @@ namespace DupeNukem.Internal
         {
             this.method = method;
             this.parameterTypes =
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-                this.method.GetMethodInfo().
-#else
-                this.method.Method.
-#endif
+                this.method.GetMethodInfo()!.
                 GetParameters().
                 Select(p => p.ParameterType).
                 ToArray();
@@ -408,6 +429,38 @@ namespace DupeNukem.Internal
             var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
                 ConfigureAwait(false);
             return result;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class DynamicFunctionDescriptor : MethodDescriptor
+    {
+        private readonly Delegate function;
+        private readonly Type[] parameterTypes;
+
+        public DynamicFunctionDescriptor(
+            Delegate function, IMessenger messenger) :
+            base(messenger, new(false, null))
+        {
+            this.function = function;
+            this.parameterTypes =
+                this.function.GetMethodInfo()!.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            var task = (Task)this.function.DynamicInvoke(cas)!;
+            return await TaskResultGetter.GetResultAsync(task);
         }
     }
 }

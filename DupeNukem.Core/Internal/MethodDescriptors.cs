@@ -58,8 +58,10 @@ namespace DupeNukem.Internal
                 JObject jo when
                     jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
                     m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name && name.StartsWith("__peerClosures__.closure_$") =>
-                    (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(typeof(T)) =>
+                        (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
                 // Other value types.
                 _ => arg.ToObject<T>(this.messenger.Serializer)!,
             };
@@ -73,8 +75,10 @@ namespace DupeNukem.Internal
                 JObject jo when
                     jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
                     m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name && name.StartsWith("closure_$") =>
-                    this.messenger.RegisterPeerClosure(name, type),
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(type) =>
+                        this.messenger.RegisterPeerClosure(name, type),
                 // Other value types.
                 _ => arg.ToObject(type, this.messenger.Serializer)!,
             };

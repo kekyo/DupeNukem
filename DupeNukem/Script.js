@@ -159,7 +159,12 @@ var __dupeNukem_Messenger__ =
                     this.log__("DupeNukem: closure: " + message.id + ": " + message.body);
                     switch (message.id) {
                         case "discard":
-                            delete window.__closures[message.body];
+                            // Decline invalid name to avoid security attacks.
+                            if (message.body.startsWith("__peerClosures__.closure_$")) {
+                                const baseName = message.body.substring(17);
+                                delete window.__peerClosures__[baseName];
+                                this.log__("Detected abandoned peer closure: " + baseName);
+                            }
                             break;
                     }
                     break;
@@ -173,9 +178,9 @@ var __dupeNukem_Messenger__ =
     this.invokeHostMethod__ = (name, args) => {
         const rargs = args.map(arg => {
             if (typeof arg == "function") {
-                const base_name = "closure_$" + (this.id__++);
-                window.__peerClosures__[base_name] = arg;
-                const name = "__peerClosures__." + base_name;
+                const baseName = "closure_$" + (this.id__++);
+                window.__peerClosures__[baseName] = arg;
+                const name = "__peerClosures__." + baseName;
                 return { id: "descriptor", type: "closure", body: name, };
             } else {
                 return arg;

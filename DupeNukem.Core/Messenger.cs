@@ -48,7 +48,7 @@ namespace DupeNukem
         private readonly Queue<WeakReference> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
-        private readonly Dictionary<string, WeakReference> closureRegistry = new();
+        private readonly FinalizationRegistry peerClosureRegistry;
         private volatile int id;
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -104,7 +104,19 @@ namespace DupeNukem
 #else
                 TimeSpan.FromSeconds(30);
 #endif
-            this.timeoutTimer = new Timer(this.ReachTimeout, null, 0, 0);
+            this.timeoutTimer = new(this.ReachTimeout, null, 0, 0);
+            this.peerClosureRegistry = new(name =>
+            {
+                var request = new Message(
+                    "discard",
+                    MessageTypes.Closure,
+                    JToken.FromObject(name, this.Serializer));
+
+                var tw = new StringWriter();
+                this.Serializer.Serialize(tw, request);
+
+                this.SendMessageToPeer(tw.ToString());
+            });
         }
 
         public virtual void Dispose()
@@ -185,7 +197,7 @@ namespace DupeNukem
                 return null;
             }
 
-            //this.closureRegistry.SafeAdd(name, new(dlg));
+            this.peerClosureRegistry.Register(dlg, name);
 
             return dlg;
         }
@@ -270,16 +282,16 @@ namespace DupeNukem
                 case null:
                     return null;
                 case Delegate closure:
-                    var id = "closure_$" + Interlocked.Increment(ref this.id);
+                    var name = "closure_$" + Interlocked.Increment(ref this.id);
                     this.RegisterMethod(
-                        id,
+                        name,
                         new DynamicFunctionDescriptor(closure, this),
                         true);
                     return JToken.FromObject(
                         new Message(
                             "descriptor",
                             MessageTypes.Closure,
-                            JToken.FromObject(id, this.Serializer)),
+                            JToken.FromObject(name, this.Serializer)),
                         this.Serializer);
                 default:
                     return JToken.FromObject(
@@ -497,9 +509,15 @@ namespace DupeNukem
                         break;
 
                     case MessageTypes.Closure:
+                        switch (message.Id)
                         {
-                            var name = message.Body!.ToObject<string>(this.Serializer)!;
-                            this.methods.SafeRemove(name);
+                            case "discard" when
+                                // Decline invalid name to avoid security attacks.
+                                message.Body!.ToObject<string>(this.Serializer) is { } name &&
+                                name.StartsWith("closure_$"):
+                                    this.methods.SafeRemove(name);
+                                    Trace.WriteLine($"DupeNukem: Detected abandoned peer closure: {name}");
+                                    break;
                         }
                         break;
                 }

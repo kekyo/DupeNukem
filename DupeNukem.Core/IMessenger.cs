@@ -85,10 +85,14 @@ namespace DupeNukem
         [EditorBrowsable(EditorBrowsableState.Never)]
         void UnregisterMethod(string name, bool hasSpecifiedName);
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        Delegate? RegisterPeerClosure(string name, Type delegateType);
+
         Task InvokePeerMethodAsync(
             CancellationToken ct, string methodName, params object?[] args);
-
         Task<TR> InvokePeerMethodAsync<TR>(
             CancellationToken ct, string methodName, params object?[] args);
+        Task<object?> InvokePeerMethodAsync(
+            CancellationToken ct, Type returnType, string methodName, params object?[] args);
     }
 }

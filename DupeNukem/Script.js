@@ -155,6 +155,14 @@ var __dupeNukem_Messenger__ =
                             break;
                     }
                     break;
+                case "closure":
+                    this.log__("DupeNukem: closure: " + message.id + ": " + message.body);
+                    switch (message.id) {
+                        case "discard":
+                            delete window.__closures[message.body];
+                            break;
+                    }
+                    break;
             }
         }
         catch (e) {
@@ -163,12 +171,23 @@ var __dupeNukem_Messenger__ =
     };
 
     this.invokeHostMethod__ = (name, args) => {
+        const rargs = args.map(arg => {
+            if (typeof arg == "function") {
+                const base_name = "closure_$" + (this.id__++);
+                window.__peerClosures__[base_name] = arg;
+                const name = "__peerClosures__." + base_name;
+                return { id: "descriptor", type: "closure", body: name, };
+            } else {
+                return arg;
+            }
+        });
+
         return new Promise((resolve, reject) => {
             const id = "client_" + (this.id__++);
             try {
                 const descriptor = { resolve: resolve, reject: reject, };
                 this.suspendings__.set(id, descriptor);
-                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: args, }, }));
+                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: rargs, }, }));
             }
             catch (e) {
                 reject(e);
@@ -261,6 +280,8 @@ var __dupeNukem_Messenger__ =
         console.info("DupeNukem: Ready to host managed.");
     }
 })();
+
+var __peerClosures__ = new Object();
 
 var __dupeNukem_invokeHostMethod__ =
     __dupeNukem_invokeHostMethod__ || function (entry) {

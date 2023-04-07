@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,7 @@ namespace DupeNukem
         private readonly Queue<WeakReference> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
+        private readonly Dictionary<string, WeakReference> closureRegistry = new();
         private volatile int id;
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -162,6 +164,30 @@ namespace DupeNukem
                     return this.methods.Keys.ToArray();
                 }
             }
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public Delegate? RegisterPeerClosure(string name, Type delegateType)
+        {
+            if (!typeof(Delegate).IsAssignableFrom(delegateType))
+            {
+                Trace.WriteLine($"DupeNukem: {delegateType.FullName} is not a delegate.");
+                return null;
+            }
+
+            if (ClosureTrampolineFactory.Create(
+                delegateType,
+                (args, returnType, ct) => this.InvokePeerMethodAsync(ct, returnType, name, args)) is not { } dlg)
+            {
+                Trace.WriteLine($"DupeNukem: Invalid delegate type: {delegateType.FullName}");
+                return null;
+            }
+
+            //this.closureRegistry.SafeAdd(name, new(dlg));
+
+            return dlg;
         }
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -323,6 +349,17 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new SuspendingDescriptor<TR>();
+            this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
+
+            return descriptor.Task;
+        }
+
+        public Task<object?> InvokePeerMethodAsync(
+            CancellationToken ct, Type returnType, string methodName, params object?[] args)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var descriptor = new DynamicSuspendingDescriptor(returnType);
             this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
             return descriptor.Task;

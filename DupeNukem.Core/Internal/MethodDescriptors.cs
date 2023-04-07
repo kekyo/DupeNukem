@@ -50,9 +50,34 @@ namespace DupeNukem.Internal
         public abstract Task<object?> InvokeAsync(JToken?[] args);
 
         protected T ToObject<T>(JToken? arg) =>
-            (arg != null) ? arg.ToObject<T>(this.messenger.Serializer)! : default(T)!;
+            arg switch
+            {
+                // Null.
+                null => default!,
+                // Function closure comes from JavaScript.
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name && name.StartsWith("__peerClosures__.closure_$") =>
+                    (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
+                // Other value types.
+                _ => arg.ToObject<T>(this.messenger.Serializer)!,
+            };
+
         protected object? ToObject(JToken? arg, Type type) =>
-            (arg != null) ? arg.ToObject(type, this.messenger.Serializer) : Utilities.GetDefaultValue(type);
+            arg switch
+            {
+                // Null.
+                null => default!,
+                // Function closure comes from JavaScript.
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name && name.StartsWith("closure_$") =>
+                    this.messenger.RegisterPeerClosure(name, type),
+                // Other value types.
+                _ => arg.ToObject(type, this.messenger.Serializer)!,
+            };
 
         protected void BeginCapturingArguments() =>
             DeserializingRegisteredObjectRegistry.Begin();

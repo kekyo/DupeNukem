@@ -73,6 +73,18 @@ namespace DupeNukem.Internal
             Array.Empty<T>();
 #endif
 
+#if !NET471_OR_GREATER || !NETSTANDARD2_0_OR_GREATER
+        internal static IEnumerable<T> Append<T>(
+            this IEnumerable<T> enumerable, T value)
+        {
+            foreach (var item in enumerable)
+            {
+                yield return item;
+            }
+            yield return value;
+        }
+#endif
+
         ///////////////////////////////////////////////////////////////////////////////
 
         internal static string GetName(Type type)
@@ -235,6 +247,32 @@ namespace DupeNukem.Internal
         internal static bool IsAssignableFrom(
             this Type type, Type rhs) =>
             type.GetTypeInfo().IsAssignableFrom(rhs.GetTypeInfo());
+#endif
+
+#if NET35 || NET40
+        internal static Delegate CreateDelegate(
+            this MethodInfo method, Type delegateType, object target) =>
+            Delegate.CreateDelegate(delegateType, target, method);
+#endif
+
+        internal static bool IsGenericType(
+            this Type type) =>
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+            type.GetTypeInfo().IsGenericType;
+#else
+            type.IsGenericType;
+#endif
+
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+        internal static Type[] GetGenericArguments(
+            this Type type) =>
+            type.GetTypeInfo().GenericTypeArguments;
+#endif
+
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+        internal static MethodInfo GetMethod(
+            this Type type, string name) =>
+            type.GetTypeInfo().GetDeclaredMethod(name);
 #endif
 
         internal static IEnumerable<MethodEntry> EnumerateTargetMethods(

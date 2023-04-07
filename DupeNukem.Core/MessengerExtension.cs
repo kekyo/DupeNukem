@@ -280,5 +280,9 @@ namespace DupeNukem
         public static Task<TR> InvokePeerMethodAsync<TR>(
             this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync<TR>(default, functionName, args);
+
+        public static Task<object?> InvokePeerMethodAsync(
+            this IMessenger messenger, Type returnType, string functionName, params object?[] args) =>
+            messenger.InvokePeerMethodAsync(default, returnType, functionName, args);
     }
 }

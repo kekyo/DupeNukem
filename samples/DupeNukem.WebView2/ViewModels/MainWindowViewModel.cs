@@ -12,8 +12,10 @@
 using Epoxy;
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -117,6 +119,12 @@ namespace DupeNukem.ViewModels
                     messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(
                         "array",
                         async keys => { await Task.Delay(100); return keys; });
+                    messenger.RegisterFunc<string, int, int, Func<int, int, Task<string>>>(
+                        "callback",
+                        async (a, b, cb) => { var r = await cb(a, b); return r; });
+                    messenger.RegisterFunc<string, int, int, Func<int, int, CancellationToken, Task<string>>>(
+                        "callback2",
+                        async (a, b, cb) => { var r = await cb(a, b, default); return r; });
                 });
 
                 this.Url = new Uri("https://www.google.com/");
@@ -168,9 +176,13 @@ namespace DupeNukem.ViewModels
 
                 // Test JavaScript --> .NET methods with callback
                 Func<int, int, Task<string>> callback = (a, b) =>
-                    Task.FromResult((a + b).ToString());
+                    Task.FromResult($"{a}-{b}");
                 var result_callback = await messenger.InvokePeerMethodAsync<string>("js_callback", 1, 2, callback);
                 Trace.WriteLine($"js_callback: {result_callback}");
+                Func<int, int, CancellationToken, Task<string>> callback2 = (a, b, ct) =>
+                    Task.FromResult($"{a}-{b}");
+                var result_callback2 = await messenger.InvokePeerMethodAsync<string>("js_callback2", 1, 2, callback2);
+                Trace.WriteLine($"js_callback2: {result_callback2}");
 
                 Trace.WriteLine("ALL TEST IS DONE AT .NET SIDE.");
             };
@@ -188,6 +200,7 @@ namespace DupeNukem.ViewModels
             script.AppendLine("async function js_enum2(a) { console.log('js_enum2(' + a + ')'); return 42; }");
             script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
             script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
+            script.AppendLine("async function js_callback2(a, b, cb) { return await cb(a, b, new CancellationToken()); }");
 
             // Invoke JavaScript --> .NET methods:
             script.AppendLine("var tester = async () => {");
@@ -203,6 +216,10 @@ namespace DupeNukem.ViewModels
             script.AppendLine("  console.log('enum3: ' + result_enum3);");
             script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
             script.AppendLine("  console.log('array: ' + result_array);");
+            script.AppendLine("  const result_callback = await invokeHostMethod('callback', 1, 2, async (a, b) => a + '-' + b);");
+            script.AppendLine("  console.log('callback: ' + result_callback);");
+            script.AppendLine("  const result_callback2 = await invokeHostMethod('callback2', 1, 2, async (a, b, ct) => a + '-' + b);");
+            script.AppendLine("  console.log('callback2: ' + result_callback2);");
 
             script.AppendLine("  try {");
             script.AppendLine("    await invokeHostMethod('unknown', 12, 34, 56);");

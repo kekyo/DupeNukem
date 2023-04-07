@@ -219,6 +219,67 @@ It is limitation for JavaScript specification.
 
 ----
 
+## Callbacks
+
+DupeNukem can propagate callbacks passed as arguments.
+In effect, it allows for bidirectional method and function calls:
+
+```csharp
+// .NET: Delegate callback functions to be passed to JS.
+static Task<string> CallbackMethodAsync(int a, int b)
+{
+    return Task.FromResult($"{a} and {b}");
+}
+
+// (Result: "Passed: 1 and 2")
+var result = await messenger.InvokePeerMethodAsync<string>(
+    "js_callback", 1, 2, CallbackMethodAsync);`
+```
+
+``` javascript
+// JS: Call the .NET callback.
+async function js_callback(a, b, cb) {
+    const str = await cb(a, b);
+    return "Passed: " + str;
+}
+```
+
+Callback calls in the opposite direction of the above are also possible:
+
+``` javascript
+// JS: Callback functions to be passed to .NET.
+var result = await dotnet_callback(1, 2,
+    async (a, b) => {
+        return a + " and " + b;
+    });
+```
+
+```csharp
+// .NET: Call the JS callback.
+public async Task<string> dotnet_callback(
+    int a, int b, Func<int, int, Task<string>> cb)
+{
+    var str = await cb(a, b);
+    return $"Passed: {str}";
+}
+```
+
+Delegates and functions can take up to 6 arguments.
+The return value must be `Task` or `Promise` type.
+It is possible to return the value of the result of asynchronous processing.
+That is, `Task<T>` and `Promise<T>` are allowed.
+
+Callback delegates and functions that take `CancellationToken` type as
+an argument can also contain `CancellationToken`.
+In that case, use that `CancellationToken` for asynchronous processing cancellation of DupeNukem.
+
+Callback delegates and functions are automatically collected by the both garbage collectors
+when they are no longer referenced by anyone.
+Therefore, there is no need to think about managing these objects.
+You can also store these objects somewhere when you receive them and call the callback when you need them.
+
+----
+
 ## Exception
 
 DupeNukem can propagate exceptions to each other as exceptions without having to do anything.
@@ -295,6 +356,7 @@ public class FooException : Exception
         base(message) =>
         this.StatusCode = statusCode;
 }
+```
 
 ```javascript
 try {
@@ -542,6 +604,8 @@ Apache-v2.
 
 ## History
 
+* 0.22.0:
+  * Supported callback delegates/functions on the arguments.
 * 0.21.0:
   * Added `ExceptionProperty` attribute.
 * 0.20.0:

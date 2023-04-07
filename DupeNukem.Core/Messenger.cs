@@ -20,6 +20,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,6 +47,7 @@ namespace DupeNukem
         private readonly Queue<WeakReference> timeoutQueue = new();
         private readonly TimeSpan timeoutDuration;
         private readonly Timer timeoutTimer;
+        private readonly FinalizationRegistry peerClosureRegistry;
         private volatile int id;
 
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -73,7 +75,7 @@ namespace DupeNukem
             {
                 DateFormatHandling = DateFormatHandling.IsoDateFormat,
                 DateParseHandling = DateParseHandling.DateTimeOffset,
-                DateTimeZoneHandling = DateTimeZoneHandling.Local,
+                DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind,
                 NullValueHandling = NullValueHandling.Include,
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -101,7 +103,21 @@ namespace DupeNukem
 #else
                 TimeSpan.FromSeconds(30);
 #endif
-            this.timeoutTimer = new Timer(this.ReachTimeout, null, 0, 0);
+            this.timeoutTimer = new(this.ReachTimeout, null, 0, 0);
+            this.peerClosureRegistry = new(name =>
+            {
+                var request = new Message(
+                    "discard",
+                    MessageTypes.Closure,
+                    JToken.FromObject(name, this.Serializer));
+
+                var tw = new StringWriter();
+                this.Serializer.Serialize(tw, request);
+
+                this.SendMessageToPeer(tw.ToString());
+
+                Trace.WriteLine($"DupeNukem: Sent discarded closure delegate: {name}");
+            });
         }
 
         public virtual void Dispose()
@@ -165,9 +181,35 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public Delegate? RegisterPeerClosure(string name, Type delegateType)
+        {
+            if (!typeof(Delegate).IsAssignableFrom(delegateType))
+            {
+                Trace.WriteLine($"DupeNukem: {delegateType.FullName} is not a delegate.");
+                return null;
+            }
+
+            if (ClosureTrampolineFactory.Create(
+                delegateType,
+                (args, returnType, ct) => this.InvokePeerMethodAsync(ct, returnType, name, args)) is not { } dlg)
+            {
+                Trace.WriteLine($"DupeNukem: Invalid delegate type: {delegateType.FullName}");
+                return null;
+            }
+
+            this.peerClosureRegistry.Register(dlg, name);
+
+            return dlg;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////
+
         [EditorBrowsable(EditorBrowsableState.Advanced)]
         protected void CancelAllSuspending()
         {
+            this.peerClosureRegistry.ForceClear();
+
             lock (this.timeoutQueue)
             {
                 while (this.timeoutQueue.Count >= 1)
@@ -223,10 +265,53 @@ namespace DupeNukem
             }
         }
 
+        private void ValidateArgumentType(object? arg)
+        {
+            if (arg is Delegate closure)
+            {
+                var mi = closure.GetMethodInfo()!;
+                if (!typeof(Task).IsAssignableFrom(mi.ReturnType))
+                {
+                    throw new JsonSerializationException(
+                        $"Could not serialize the delegate. Return type is not Task type.");
+                }
+            }
+        }
+
+        private JToken? SerializeArgument(object? arg)
+        {
+            switch (arg)
+            {
+                case null:
+                    return null;
+                case Delegate closure:
+                    var name = "closure_$" + Interlocked.Increment(ref this.id);
+                    this.RegisterMethod(
+                        name,
+                        new DynamicFunctionDescriptor(closure, this),
+                        true);
+                    return JToken.FromObject(
+                        new Message(
+                            "descriptor",
+                            MessageTypes.Closure,
+                            JToken.FromObject(name, this.Serializer)),
+                        this.Serializer);
+                default:
+                    return JToken.FromObject(
+                        arg,
+                        this.Serializer);
+            }
+        }
+
         private void SendInvokeMessageToPeer(
             SuspendingDescriptor descriptor, CancellationToken ct,
             string functionName, object?[] args)
         {
+            foreach (var arg in args)
+            {
+                this.ValidateArgumentType(arg);
+            }
+
             lock (this.timeoutQueue)
             {
                 this.timeoutQueue.Enqueue(new WeakReference(descriptor));
@@ -249,7 +334,7 @@ namespace DupeNukem
 
             var body = new InvokeBody(
                 functionName,
-                args.Select(arg => arg != null ? JToken.FromObject(arg, this.Serializer) : null).
+                args.Select(this.SerializeArgument).
                 ToArray());
             var request = new Message(
                 id,
@@ -279,6 +364,17 @@ namespace DupeNukem
             ct.ThrowIfCancellationRequested();
 
             var descriptor = new SuspendingDescriptor<TR>();
+            this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
+
+            return descriptor.Task;
+        }
+
+        public Task<object?> InvokePeerMethodAsync(
+            CancellationToken ct, Type returnType, string methodName, params object?[] args)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var descriptor = new DynamicSuspendingDescriptor(returnType);
             this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
             return descriptor.Task;
@@ -412,6 +508,19 @@ namespace DupeNukem
                                 props);
 
                             this.SendExceptionMessageToPeer(message, responseBody);
+                        }
+                        break;
+
+                    case MessageTypes.Closure:
+                        switch (message.Id)
+                        {
+                            case "discard" when
+                                // Decline invalid name to avoid security attacks.
+                                message.Body!.ToObject<string>(this.Serializer) is { } name &&
+                                name.StartsWith("closure_$"):
+                                    this.methods.SafeRemove(name);
+                                    Trace.WriteLine($"DupeNukem: Deleted peer closure target delegate: {name}");
+                                    break;
                         }
                         break;
                 }

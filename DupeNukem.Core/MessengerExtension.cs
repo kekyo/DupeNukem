@@ -157,11 +157,7 @@ namespace DupeNukem
                     oas.FirstOrDefault() :
                     null);
         private static MethodMetadata GetMetadata(bool isProxyInjecting, Delegate dlg) =>
-#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-            GetMetadata(isProxyInjecting, dlg.GetMethodInfo());
-#else
-            GetMetadata(isProxyInjecting, dlg.Method);
-#endif
+            GetMetadata(isProxyInjecting, dlg.GetMethodInfo()!);
 
         public static string RegisterDynamicMethod(
             this IMessenger messenger, Delegate method) =>
@@ -284,5 +280,9 @@ namespace DupeNukem
         public static Task<TR> InvokePeerMethodAsync<TR>(
             this IMessenger messenger, string functionName, params object?[] args) =>
             messenger.InvokePeerMethodAsync<TR>(default, functionName, args);
+
+        public static Task<object?> InvokePeerMethodAsync(
+            this IMessenger messenger, Type returnType, string functionName, params object?[] args) =>
+            messenger.InvokePeerMethodAsync(default, returnType, functionName, args);
     }
 }

@@ -18,6 +18,14 @@ var __dupeNukem_Messenger__ =
     this.debugLog__ = false;
     this.isInitialized__ = false;
 
+    this.registry__ = new FinalizationRegistry(name => {
+        if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+            window.__dupeNukem_Messenger_sendToHostMessage__(
+                JSON.stringify({ id: "discard", type: "closure", body: name, }));
+            this.log__("DupeNukem: Sent discarded closure function: " + name);
+        }
+    });
+
     this.log__ = (message) => {
         if (this.debugLog__) {
             console.log(message);
@@ -108,7 +116,26 @@ var __dupeNukem_Messenger__ =
                                 this.sendExceptionToHost__(message, { name: "invalidFunctionName", message: "Function \"" + fn + "\" is not found.", detail: "", });
                             }
                             else {
-                                f.apply(ti, message.body.args).
+                                const args = message.body.args.map(
+                                    arg => {
+                                        if (arg == null) {
+                                            return null;
+                                        } else if (arg.id == "descriptor" && arg.type == "closure" && arg.body?.startsWith("closure_$")) {
+                                            const name = arg.body;
+                                            const cb = function () {
+                                                const args = new Array(arguments.length);
+                                                for (let i = 0; i < args.length; i++) {
+                                                    args[i] = arguments[i];
+                                                }
+                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
+                                            };
+                                            this.registry__.register(cb, name);
+                                            return cb;
+                                        } else {
+                                            return arg;
+                                        }
+                                    });
+                                f.apply(ti, args).
                                     then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
                                     catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }
@@ -129,6 +156,19 @@ var __dupeNukem_Messenger__ =
                             break;
                     }
                     break;
+                case "closure":
+                    this.log__("DupeNukem: closure: " + message.id + ": " + message.body);
+                    switch (message.id) {
+                        case "discard":
+                            // Decline invalid name to avoid security attacks.
+                            if (message.body.startsWith("__peerClosures__.closure_$")) {
+                                const baseName = message.body.substring(17);
+                                delete window.__peerClosures__[baseName];
+                                this.log__("DupeNukem: Deleted peer closure target function: " + baseName);
+                            }
+                            break;
+                    }
+                    break;
             }
         }
         catch (e) {
@@ -137,12 +177,23 @@ var __dupeNukem_Messenger__ =
     };
 
     this.invokeHostMethod__ = (name, args) => {
+        const rargs = args.map(arg => {
+            if (typeof arg == "function") {
+                const baseName = "closure_$" + (this.id__++);
+                window.__peerClosures__[baseName] = arg;
+                const name = "__peerClosures__." + baseName;
+                return { id: "descriptor", type: "closure", body: name, };
+            } else {
+                return arg;
+            }
+        });
+
         return new Promise((resolve, reject) => {
             const id = "client_" + (this.id__++);
             try {
                 const descriptor = { resolve: resolve, reject: reject, };
                 this.suspendings__.set(id, descriptor);
-                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: args, }, }));
+                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: rargs, }, }));
             }
             catch (e) {
                 reject(e);
@@ -235,6 +286,8 @@ var __dupeNukem_Messenger__ =
         console.info("DupeNukem: Ready to host managed.");
     }
 })();
+
+var __peerClosures__ = new Object();
 
 var __dupeNukem_invokeHostMethod__ =
     __dupeNukem_invokeHostMethod__ || function (entry) {

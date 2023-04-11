@@ -13,59 +13,58 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace DupeNukem.Internal
+namespace DupeNukem.Internal;
+
+internal abstract class TaskResultGetter
 {
-    internal abstract class TaskResultGetter
+    private static readonly Dictionary<Type, TaskResultGetter> getters = new();
+    private static readonly TaskResultGetter voidGetter = new VoidTaskResultGetter();
+
+    public static Task<object?> GetResultAsync(Task task)
     {
-        private static readonly Dictionary<Type, TaskResultGetter> getters = new();
-        private static readonly TaskResultGetter voidGetter = new VoidTaskResultGetter();
-
-        public static Task<object?> GetResultAsync(Task task)
+        var taskType = task.GetType();
+        if (taskType == typeof(Task))
         {
-            var taskType = task.GetType();
-            if (taskType == typeof(Task))
-            {
-                return voidGetter.InternalGetResultAsync(task);
-            }
-            else
-            {
+            return voidGetter.InternalGetResultAsync(task);
+        }
+        else
+        {
 #if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
-                var returnType = taskType.GenericTypeArguments[0]!;
+            var returnType = taskType.GenericTypeArguments[0]!;
 #else
-                var returnType = taskType.GetGenericArguments()[0]!;
+            var returnType = taskType.GetGenericArguments()[0]!;
 #endif
-                TaskResultGetter getter;
-                lock (getters)
+            TaskResultGetter getter;
+            lock (getters)
+            {
+                if (!getters.TryGetValue(returnType, out getter!))
                 {
-                    if (!getters.TryGetValue(returnType, out getter!))
-                    {
-                        var invokerType = typeof(TypedTaskResultGetter<>).MakeGenericType(returnType);
-                        getter = (TaskResultGetter)Activator.CreateInstance(invokerType)!;
-                        getters.Add(returnType, getter);
-                    }
+                    var invokerType = typeof(TypedTaskResultGetter<>).MakeGenericType(returnType);
+                    getter = (TaskResultGetter)Activator.CreateInstance(invokerType)!;
+                    getters.Add(returnType, getter);
                 }
-                return getter!.InternalGetResultAsync(task);
             }
+            return getter!.InternalGetResultAsync(task);
         }
+    }
 
-        protected abstract Task<object?> InternalGetResultAsync(Task task);
+    protected abstract Task<object?> InternalGetResultAsync(Task task);
 
-        private sealed class VoidTaskResultGetter : TaskResultGetter
+    private sealed class VoidTaskResultGetter : TaskResultGetter
+    {
+        protected override async Task<object?> InternalGetResultAsync(Task task)
         {
-            protected override async Task<object?> InternalGetResultAsync(Task task)
-            {
-                await task.ConfigureAwait(false);
-                return null;
-            }
+            await task.ConfigureAwait(false);
+            return null;
         }
+    }
 
-        private sealed class TypedTaskResultGetter<T> : TaskResultGetter
+    private sealed class TypedTaskResultGetter<T> : TaskResultGetter
+    {
+        protected override async Task<object?> InternalGetResultAsync(Task task)
         {
-            protected override async Task<object?> InternalGetResultAsync(Task task)
-            {
-                var result = await ((Task<T>)task).ConfigureAwait(false);
-                return result;
-            }
+            var result = await ((Task<T>)task).ConfigureAwait(false);
+            return result;
         }
     }
 }

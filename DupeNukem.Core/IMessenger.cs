@@ -17,82 +17,81 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DupeNukem
+namespace DupeNukem;
+
+public sealed class InvalidMessageEventArgs : EventArgs
 {
-    public sealed class InvalidMessageEventArgs : EventArgs
+    public readonly Exception Exception;
+
+    public InvalidMessageEventArgs(Exception ex) =>
+        this.Exception = ex;
+
+    public override string ToString() =>
+        this.Exception.Message;
+
+    public void Deconstruct(out Exception exception) =>
+        exception = this.Exception;
+}
+
+public sealed class SpriousMessageEventArgs : EventArgs
+{
+    public readonly string Json;
+
+    public SpriousMessageEventArgs(string json) =>
+        this.Json = json;
+
+    public override string ToString() =>
+        $"Sprious message: {this.Json}";
+
+    public void Deconstruct(out string json) =>
+        json = this.Json;
+}
+
+[Serializable]
+public sealed class PeerInvocationException : Exception
+{
+    public readonly string Name;
+    public readonly string Detail;
+
+    public PeerInvocationException(string name, string message, string detail) :
+        base(message)
     {
-        public readonly Exception Exception;
-
-        public InvalidMessageEventArgs(Exception ex) =>
-            this.Exception = ex;
-
-        public override string ToString() =>
-            this.Exception.Message;
-
-        public void Deconstruct(out Exception exception) =>
-            exception = this.Exception;
+        this.Name = name;
+        this.Detail = detail;
     }
 
-    public sealed class SpriousMessageEventArgs : EventArgs
+    public void Deconstruct(out string name, out string detail)
     {
-        public readonly string Json;
-
-        public SpriousMessageEventArgs(string json) =>
-            this.Json = json;
-
-        public override string ToString() =>
-            $"Sprious message: {this.Json}";
-
-        public void Deconstruct(out string json) =>
-            json = this.Json;
+        name = this.Name;
+        detail = this.Detail;
     }
+}
 
-    [Serializable]
-    public sealed class PeerInvocationException : Exception
-    {
-        public readonly string Name;
-        public readonly string Detail;
+public interface IMessenger
+{
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    NamingStrategy MemberAccessNamingStrategy { get; }
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    JsonSerializer Serializer { get; }
 
-        public PeerInvocationException(string name, string message, string detail) :
-            base(message)
-        {
-            this.Name = name;
-            this.Detail = detail;
-        }
+    string[] RegisteredMethods { get; }
 
-        public void Deconstruct(out string name, out string detail)
-        {
-            name = this.Name;
-            detail = this.Detail;
-        }
-    }
+    event EventHandler? ErrorDetected;
 
-    public interface IMessenger
-    {
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        NamingStrategy MemberAccessNamingStrategy { get; }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        JsonSerializer Serializer { get; }
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    string RegisterMethod(
+        string name, MethodDescriptor method, bool hasSpecifiedName);
 
-        string[] RegisteredMethods { get; }
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    void UnregisterMethod(string name, bool hasSpecifiedName);
 
-        event EventHandler? ErrorDetected;
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    Delegate? RegisterPeerClosure(string name, Type delegateType);
 
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        string RegisterMethod(
-            string name, MethodDescriptor method, bool hasSpecifiedName);
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        void UnregisterMethod(string name, bool hasSpecifiedName);
-
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        Delegate? RegisterPeerClosure(string name, Type delegateType);
-
-        Task InvokePeerMethodAsync(
-            CancellationToken ct, string methodName, params object?[] args);
-        Task<TR> InvokePeerMethodAsync<TR>(
-            CancellationToken ct, string methodName, params object?[] args);
-        Task<object?> InvokePeerMethodAsync(
-            CancellationToken ct, Type returnType, string methodName, params object?[] args);
-    }
+    Task InvokePeerMethodAsync(
+        CancellationToken ct, string methodName, params object?[] args);
+    Task<TR> InvokePeerMethodAsync<TR>(
+        CancellationToken ct, string methodName, params object?[] args);
+    Task<object?> InvokePeerMethodAsync(
+        CancellationToken ct, Type returnType, string methodName, params object?[] args);
 }

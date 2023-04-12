@@ -81,7 +81,6 @@ public class Messenger : IMessenger, IDisposable
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
         };
         serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
-        serializer.Converters.Add(new CancellationTokenConverter());
         return serializer;
     }
 

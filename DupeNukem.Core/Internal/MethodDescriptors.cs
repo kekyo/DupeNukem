@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // independent messaging library between .NET and JavaScript.
@@ -49,39 +49,47 @@ public abstract class MethodDescriptor
 
     public abstract Task<object?> InvokeAsync(JToken?[] args);
 
-    protected T ToObject<T>(JToken? arg) =>
-        arg switch
+    protected T ToObject<T>(JToken? arg)
+    {
+        switch (arg)
         {
             // Null.
-            null => default!,
+            case null:
+                return default!;
             // Function closure comes from JavaScript.
-            JObject jo when
-                jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                name.StartsWith("__peerClosures__.closure_$") &&
-                typeof(Delegate).IsAssignableFrom(typeof(T)) =>
-                    (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
+            case JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "closure" && m.Type == MessageTypes.Metadata &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(typeof(T)):
+                return (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!;
             // Other value types.
-            _ => arg.ToObject<T>(this.messenger.Serializer)!,
+            default:
+                return arg.ToObject<T>(this.messenger.Serializer)!;
         };
+    }
 
-    protected object? ToObject(JToken? arg, Type type) =>
-        arg switch
+    protected object? ToObject(JToken? arg, Type type)
+    {
+        switch (arg)
         {
             // Null.
-            null => default!,
+            case null:
+                return default!;
             // Function closure comes from JavaScript.
-            JObject jo when
-                jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                name.StartsWith("__peerClosures__.closure_$") &&
-                typeof(Delegate).IsAssignableFrom(type) =>
-                    this.messenger.RegisterPeerClosure(name, type),
+            case JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "closure" && m.Type == MessageTypes.Metadata &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(type):
+                return this.messenger.RegisterPeerClosure(name, type);
             // Other value types.
-            _ => arg.ToObject(type, this.messenger.Serializer)!,
+            default:
+                return arg.ToObject(type, this.messenger.Serializer)!;
         };
+    }
 
     protected void BeginCapturingArguments() =>
         DeserializingRegisteredObjectRegistry.Begin();

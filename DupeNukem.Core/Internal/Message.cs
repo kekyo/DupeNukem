@@ -26,7 +26,7 @@ public enum MessageTypes
     Succeeded,
     Failed,
     Invoke,
-    Closure,
+    Metadata,
 }
 
 [EditorBrowsable(EditorBrowsableState.Advanced)]

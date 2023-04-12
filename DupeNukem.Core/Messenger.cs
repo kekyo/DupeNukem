@@ -108,7 +108,7 @@ public class Messenger : IMessenger, IDisposable
         {
             var request = new Message(
                 "discard",
-                MessageTypes.Closure,
+                MessageTypes.Metadata,
                 JToken.FromObject(name, this.Serializer));
 
             var tw = new StringWriter();
@@ -292,8 +292,8 @@ public class Messenger : IMessenger, IDisposable
                     true);
                 return JToken.FromObject(
                     new Message(
-                        "descriptor",
-                        MessageTypes.Closure,
+                        "closure",
+                        MessageTypes.Metadata,
                         JToken.FromObject(name, this.Serializer)),
                     this.Serializer);
             default:
@@ -511,7 +511,7 @@ public class Messenger : IMessenger, IDisposable
                     }
                     break;
 
-                case MessageTypes.Closure:
+                case MessageTypes.Metadata:
                     switch (message.Id)
                     {
                         case "discard" when

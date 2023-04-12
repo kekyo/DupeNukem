@@ -120,7 +120,7 @@ var __dupeNukem_Messenger__ =
                                     arg => {
                                         if (arg == null) {
                                             return null;
-                                        } else if (arg.id == "descriptor" && arg.type == "closure" && arg.body?.startsWith("closure_$")) {
+                                        } else if (arg.id == "closure" && arg.type == "metadata" && arg.body?.startsWith("closure_$")) {
                                             const name = arg.body;
                                             const cb = function () {
                                                 const args = new Array(arguments.length);
@@ -156,8 +156,8 @@ var __dupeNukem_Messenger__ =
                             break;
                     }
                     break;
-                case "closure":
-                    this.log__("DupeNukem: closure: " + message.id + ": " + message.body);
+                case "metadata":
+                    this.log__("DupeNukem: metadata: " + message.id + ": " + message.body);
                     switch (message.id) {
                         case "discard":
                             // Decline invalid name to avoid security attacks.
@@ -182,7 +182,7 @@ var __dupeNukem_Messenger__ =
                 const baseName = "closure_$" + (this.id__++);
                 window.__peerClosures__[baseName] = arg;
                 const name = "__peerClosures__." + baseName;
-                return { id: "descriptor", type: "closure", body: name, };
+                return { id: "closure", type: "metadata", body: name, };
             } else {
                 return arg;
             }

@@ -14,6 +14,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
@@ -55,14 +56,28 @@ public abstract class MethodDescriptor
             // Null.
             case null:
                 return default!;
-            // Function closure comes from JavaScript.
             case JObject jo when
                     jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                    m.Id == "closure" && m.Type == MessageTypes.Metadata &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                    name.StartsWith("__peerClosures__.closure_$") &&
-                    typeof(Delegate).IsAssignableFrom(typeof(T)):
-                return (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!;
+                    m.Type == MessageTypes.Metadata &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name:
+                // Function closure comes from JavaScript.
+                if (m.Id == "closure" &&
+                    typeof(Delegate).IsAssignableFrom(typeof(T)) &&
+                    name.StartsWith("__peerClosures__.closure_$"))
+                {
+                    return (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!;
+                }
+                // CancellationToken
+                else if (m.Id == "cancellationToken" &&
+                    typeof(CancellationToken).Equals(typeof(T)) &&
+                    name.StartsWith("cancellationToken_$"))
+                {
+                    return (T)(object)this.messenger.RegisterCancellationToken(name)!;
+                }
+                else
+                {
+                    return arg.ToObject<T>(this.messenger.Serializer)!;
+                }
             // Other value types.
             default:
                 return arg.ToObject<T>(this.messenger.Serializer)!;
@@ -76,14 +91,28 @@ public abstract class MethodDescriptor
             // Null.
             case null:
                 return default!;
-            // Function closure comes from JavaScript.
             case JObject jo when
                     jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                    m.Id == "closure" && m.Type == MessageTypes.Metadata &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                    name.StartsWith("__peerClosures__.closure_$") &&
-                    typeof(Delegate).IsAssignableFrom(type):
-                return this.messenger.RegisterPeerClosure(name, type);
+                    m.Type == MessageTypes.Metadata &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name:
+                // Function closure comes from JavaScript.
+                if (m.Id == "closure" &&
+                    typeof(Delegate).IsAssignableFrom(type) &&
+                    name.StartsWith("__peerClosures__.closure_$"))
+                {
+                    return this.messenger.RegisterPeerClosure(name, type);
+                }
+                // CancellationToken
+                else if (m.Id == "cancellationToken" &&
+                    typeof(CancellationToken).Equals(type) &&
+                    name.StartsWith("cancellationToken_$"))
+                {
+                    return this.messenger.RegisterCancellationToken(name);
+                }
+                else
+                {
+                    return arg.ToObject(type, this.messenger.Serializer)!;
+                }
             // Other value types.
             default:
                 return arg.ToObject(type, this.messenger.Serializer)!;

@@ -17,6 +17,7 @@ var __dupeNukem_Messenger__ =
     this.id__ = 0;
     this.debugLog__ = false;
     this.isInitialized__ = false;
+    this.ctss__ = new Map();
 
     this.registry__ = new FinalizationRegistry(name => {
         if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
@@ -120,17 +121,37 @@ var __dupeNukem_Messenger__ =
                                     arg => {
                                         if (arg == null) {
                                             return null;
-                                        } else if (arg.id == "closure" && arg.type == "metadata" && arg.body?.startsWith("closure_$")) {
+                                        } else if (arg.type == "metadata") {
                                             const name = arg.body;
-                                            const cb = function () {
-                                                const args = new Array(arguments.length);
-                                                for (let i = 0; i < args.length; i++) {
-                                                    args[i] = arguments[i];
-                                                }
-                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
-                                            };
-                                            this.registry__.register(cb, name);
-                                            return cb;
+                                            switch (arg.id) {
+                                                case "closure":
+                                                    if (name.startsWith("closure_$")) {
+                                                        const cb = function () {
+                                                            const args = new Array(arguments.length);
+                                                            for (let i = 0; i < args.length; i++) {
+                                                                args[i] = arguments[i];
+                                                            }
+                                                            return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
+                                                        };
+                                                        this.registry__.register(cb, name);
+                                                        return cb;
+                                                    }
+                                                    break;
+                                                case "cancellationToken":
+                                                    if (name.startsWith("cancellationToken_$")) {
+                                                        let wr = this.ctss__.get(name);
+                                                        let ct = wr?.deref();
+                                                        if (ct != undefined) {
+                                                            return ct;
+                                                        }
+                                                        ct = new CancellationToken(name);
+                                                        wr = new WeakRef(ct);
+                                                        this.ctss__.set(name, wr);
+                                                        return ct;
+                                                    }
+                                                    break;
+                                            }
+                                            return undefined;
                                         } else {
                                             return arg;
                                         }
@@ -167,6 +188,24 @@ var __dupeNukem_Messenger__ =
                                 this.log__("DupeNukem: Deleted peer closure target function: " + baseName);
                             }
                             break;
+                        case "cancel":
+                            if (message.body.startsWith("cancellationToken_$")) {
+                                const name = message.body;
+                                let wr = this.ctss__.get(name);
+                                let ct = wr?.deref();
+                                if (ct == undefined) {
+                                    ct = new CancellationToken(name);
+                                    ct.__isCanceled__ = true;
+                                    wr = new WeakRef(ct);
+                                    this.ctss__.set(name, wr);
+                                } else if (!ct.__isCanceled__) {
+                                    ct.__isCanceled__ = true;
+                                    if (ct.__action__ != undefined) {
+                                        ct.__action__();
+                                    }
+                                }
+                            }
+                            break;
                     }
                     break;
             }
@@ -183,9 +222,10 @@ var __dupeNukem_Messenger__ =
                 window.__peerClosures__[baseName] = arg;
                 const name = "__peerClosures__." + baseName;
                 return { id: "closure", type: "metadata", body: name, };
-            } else {
-                return arg;
+            } else if (arg?.__ctid__ != undefined) {
+                return { id: "cancellationToken", type: "metadata", body: arg.__ctid__, };
             }
+            return arg;
         });
 
         return new Promise((resolve, reject) => {
@@ -321,19 +361,59 @@ var invokeHostMethod =
 
 // Task.Delay like function
 var delay =
-    delay || function (msec) {
+    delay || function (msec, ct) {
     return new Promise(function (resolve, reject) {
+        if (ct != undefined) {
+            ct.register(() => reject(new OperationCancelledError()));
+        }
         setTimeout(resolve, msec);
     });
 }
 
 //////////////////////////////////////////////////
 
+class OperationCancelledError extends Error {
+    constructor(...args) {
+        super(...args);
+        this.name = this.constructor.name;
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, OperationCancelledError);
+        }
+    }
+}
+
 // CancellationToken declaration.
 var CancellationToken =
-    CancellationToken || function () {
-        this.__scope__ = "cancellationToken_" + (window.__dupeNukem_Messenger__.id__++);
-        this.cancel = () => invokeHostMethod(this.__scope__ + ".cancel");
+    CancellationToken || function (ctid) {
+        if (ctid != undefined) {
+            this.__ctid__ = ctid;
+        } else {
+            this.__ctid__ = "cancellationToken_$" + (window.__dupeNukem_Messenger__.id__++);
+        }
+        this.__isCanceled__ = false;
+
+        this.cancel = () => {
+            if (!this.__isCanceled__) {
+                this.__isCanceled__ = true;
+                window.__dupeNukem_Messenger_sendToHostMessage__(
+                    JSON.stringify({ id: "cancel", type: "metadata", body: this.__ctid__, }));
+            }
+        };
+        this.register = action => {
+            if (this.__isCanceled__) {
+                action();
+            } else {
+                this.__action__ = action;
+            }
+        };
+        this.isCancellationRequested = () => {
+            return this.__isCanceled__;
+        };
+        this.throwIfCancellationRequested = () => {
+            if (this.__isCanceled__) {
+                throw new OperationCancelledError();
+            }
+        };
     };
 
 //////////////////////////////////////////////////

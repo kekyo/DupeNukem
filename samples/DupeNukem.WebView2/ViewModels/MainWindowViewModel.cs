@@ -123,6 +123,9 @@ internal sealed class MainWindowViewModel
                 messenger.RegisterFunc<string, int, int, Func<int, int, CancellationToken, Task<string>>>(
                     "callback2",
                     async (a, b, cb) => { var r = await cb(a, b, default); return r; });
+                messenger.RegisterFunc<string, int, CancellationToken>(
+                    "delay",
+                    async (v, ct) => { await Task.Delay(v, ct); return v.ToString(); });
             });
 
             this.Url = new Uri("https://www.google.com/");
@@ -172,6 +175,24 @@ internal sealed class MainWindowViewModel
                 Trace.WriteLine("PASS: Unknown function invoking [unknown]");
             }
 
+            var result_js_delay1 = await messenger.InvokePeerMethodAsync<string>(
+                "js_delay", 500, default(CancellationToken));
+            Trace.WriteLine($"js_delay: [{result_js_delay1}]");
+
+            try
+            {
+                var cts = new CancellationTokenSource();
+                var t = messenger.InvokePeerMethodAsync<string>(
+                    "js_delay", 1000, cts.Token);
+                cts.Cancel();
+                await t;
+                Trace.WriteLine("BUG detected. [js_delay]");
+            }
+            catch (OperationCanceledException)
+            {
+                Trace.WriteLine("PASS: Cancelled [js_delay]");
+            }
+
             // Test JavaScript --> .NET methods with callback
             Func<int, int, Task<string>> callback = (a, b) =>
                 Task.FromResult($"{a}-{b}");
@@ -199,6 +220,7 @@ internal sealed class MainWindowViewModel
         script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
         script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
         script.AppendLine("async function js_callback2(a, b, cb) { return await cb(a, b, new CancellationToken()); }");
+        script.AppendLine("async function js_delay(v, ct) { await delay(v, ct); return v.toString(); }");
 
         // Invoke JavaScript --> .NET methods:
         script.AppendLine("var tester = async () => {");
@@ -218,6 +240,18 @@ internal sealed class MainWindowViewModel
         script.AppendLine("  console.log('callback: ' + result_callback);");
         script.AppendLine("  const result_callback2 = await invokeHostMethod('callback2', 1, 2, async (a, b, ct) => a + '-' + b);");
         script.AppendLine("  console.log('callback2: ' + result_callback2);");
+
+        script.AppendLine("  const result_delay1 = await invokeHostMethod('delay', 500, new CancellationToken());");
+        script.AppendLine("  console.log('delay1: ' + result_delay1);");
+        script.AppendLine("  try {");
+        script.AppendLine("    const ct = new CancellationToken();");
+        script.AppendLine("    const p = invokeHostMethod('delay', 1000, ct);");
+        script.AppendLine("    ct.cancel();");
+        script.AppendLine("    await p;");
+        script.AppendLine("    console.log('BUG detected [delay2]');");
+        script.AppendLine("  } catch (e) {");
+        script.AppendLine("    console.log('PASS: Cancelled [delay2]');");
+        script.AppendLine("  }");
 
         script.AppendLine("  try {");
         script.AppendLine("    await invokeHostMethod('unknown', 12, 34, 56);");

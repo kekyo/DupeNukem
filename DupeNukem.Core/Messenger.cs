@@ -44,6 +44,7 @@ public class Messenger : IMessenger, IDisposable
 
     private readonly Dictionary<string, MethodDescriptor> methods = new();
     private readonly Dictionary<string, SuspendingDescriptor> suspendings = new();
+    private readonly Dictionary<string, WeakReference> ctss = new();
     private readonly Queue<WeakReference> timeoutQueue = new();
     private readonly TimeSpan timeoutDuration;
     private readonly Timer timeoutTimer;
@@ -202,6 +203,29 @@ public class Messenger : IMessenger, IDisposable
         return dlg;
     }
 
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public CancellationToken RegisterCancellationToken(string name)
+    {
+        lock (this.ctss)
+        {
+            if (this.ctss.TryGetValue(name, out var wr))
+            {
+                if (wr.Target is not CancellationTokenSource cts)
+                {
+                    cts = new();
+                    wr.Target = cts;
+                }
+                return cts.Token;
+            }
+            else
+            {
+                var cts = new CancellationTokenSource();
+                this.ctss.Add(name, new(cts));
+                return cts.Token;
+            }
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -284,16 +308,36 @@ public class Messenger : IMessenger, IDisposable
             case null:
                 return null;
             case Delegate closure:
-                var name = "closure_$" + Interlocked.Increment(ref this.id);
+                var closureName = "closure_$" + Interlocked.Increment(ref this.id);
                 this.RegisterMethod(
-                    name,
+                    closureName,
                     new DynamicFunctionDescriptor(closure, this),
                     true);
                 return JToken.FromObject(
                     new Message(
                         "closure",
                         MessageTypes.Metadata,
-                        JToken.FromObject(name, this.Serializer)),
+                        JToken.FromObject(closureName, this.Serializer)),
+                    this.Serializer);
+            case CancellationToken ct:
+                var ctName = "cancellationToken_$" + Interlocked.Increment(ref this.id);
+                ct.Register(() =>
+                {
+                    var request = new Message(
+                        "cancel",
+                        MessageTypes.Metadata,
+                        JToken.FromObject(ctName, this.Serializer));
+
+                    var tw = new StringWriter();
+                    this.Serializer.Serialize(tw, request);
+
+                    this.SendMessageToPeer(tw.ToString());
+                });
+                return JToken.FromObject(
+                    new Message(
+                        "cancellationToken",
+                        MessageTypes.Metadata,
+                        JToken.FromObject(ctName, this.Serializer)),
                     this.Serializer);
             default:
                 return JToken.FromObject(
@@ -446,8 +490,14 @@ public class Messenger : IMessenger, IDisposable
                         var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
                         try
                         {
-                            throw new PeerInvocationException(
-                                error.Name, error.Message, error.Detail);
+                            switch (error.Name)
+                            {
+                                case "OperationCancelledError":
+                                    throw new OperationCanceledException(error.Message);
+                                default:
+                                    throw new PeerInvocationException(
+                                        error.Name, error.Message, error.Detail);
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -520,6 +570,33 @@ public class Messenger : IMessenger, IDisposable
                                 this.methods.SafeRemove(name);
                                 Trace.WriteLine($"DupeNukem: Deleted peer closure target delegate: {name}");
                                 break;
+                        case "cancel" when
+                            // Decline invalid name to avoid security attacks.
+                            message.Body!.ToObject<string>(this.Serializer) is { } name &&
+                            name.StartsWith("cancellationToken_$"):
+                            lock (this.ctss)
+                            {
+                                if (this.ctss.TryGetValue(name, out var wr))
+                                {
+                                    if (wr.Target is CancellationTokenSource cts)
+                                    {
+                                        cts.Cancel();
+                                    }
+                                    else
+                                    {
+                                        lock (this.ctss)
+                                        {
+                                            this.ctss.Remove(name);
+                                        }
+                                        Trace.WriteLine($"DupeNukem: Deleted peer cancellation token: {name}");
+                                    }
+                                }
+                                else
+                                {
+                                    Trace.WriteLine($"DupeNukem: Could not find peer cancellation token: {name}");
+                                }
+                            }
+                            break;
                     }
                     break;
             }

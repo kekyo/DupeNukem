@@ -394,7 +394,9 @@ try {
         longAwaitedMethod(1, 2, ct);
 }
 catch (e) {
-    // An exception is thrown when a cancellation occurs.
+    if (e instanceof OperationCancelledError) {
+      // An exception is thrown when a cancellation occurs.
+    }
 }
 ```
 
@@ -411,11 +413,41 @@ public async Task<int> LongAwaitedMethodAsync(
 }
 ```
 
-NOTE:
+NOTE: `CancellationToken` argument(s) can be defined anywhere in the argument set.
 
-* `CancellationToken` argument(s) can be defined anywhere in the argument set.
-* The above example is a call in the JavaScript --> .NET direction.
-  .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.10.0.
+We can send cancellation signal in backward direction:
+
+```csharp
+// Prepare a CancellationTokenSource
+var cts = new CancellationTokenSource();
+
+// Setup canceler (In use Epoxy):
+this.ClickAbort = Command.Factory.Create(async () =>
+{
+    cts.Cancel();
+    return default;
+});
+
+try
+{
+    // Invoke JavaScript function asynchronously:
+    var resut = await js.longAwaitedFunction(1, 2, cts.Token);
+}
+catch (OperationCanceledException ex)
+{
+    // An exception is thrown when a cancellation occurs.
+}
+```
+
+JavaScript implementation:
+
+```javascript
+async function longAwaitedFunction(a, b, ct) {
+    // Pass a CancellationToken to a time-consuming asynchronous process:
+    await delay(1000, ct);
+    return a + b;
+}
+```
 
 ----
 
@@ -604,6 +636,8 @@ Apache-v2.
 
 ## History
 
+* 0.23.0:
+  * Re-implemented full-duplex cancellation infrastructure.
 * 0.22.0:
   * Supported callback delegates/functions on the arguments.
 * 0.21.0:

@@ -87,6 +87,8 @@ public interface IMessenger
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     Delegate? RegisterPeerClosure(string name, Type delegateType);
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    CancellationToken RegisterCancellationToken(string name);
 
     Task InvokePeerMethodAsync(
         CancellationToken ct, string methodName, params object?[] args);

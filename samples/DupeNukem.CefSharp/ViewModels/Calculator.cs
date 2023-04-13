@@ -11,29 +11,28 @@
 
 using System.Threading.Tasks;
 
-namespace DupeNukem.ViewModels
+namespace DupeNukem.ViewModels;
+
+internal sealed class Calculator
 {
-    internal sealed class Calculator
+    [CallableTarget]
+    public async Task<int> add(int a, int b)
     {
-        [CallableTarget]
-        public async Task<int> add(int a, int b)
-        {
-            await Task.Delay(100);
-            return a + b;
-        }
+        await Task.Delay(100);
+        return a + b;
+    }
 
-        [CallableTarget("sub")]
-        public async Task<int> __sub__123(int a, int b)
-        {
-            await Task.Delay(100);
-            return a - b;
-        }
+    [CallableTarget("sub")]
+    public async Task<int> __sub__123(int a, int b)
+    {
+        await Task.Delay(100);
+        return a - b;
+    }
 
-        // [CallableTarget]   // couldn't invoke from JavaScript.
-        public async Task<int> mult(int a, int b)
-        {
-            await Task.Delay(100);
-            return a * b;
-        }
+    // [CallableTarget]   // couldn't invoke from JavaScript.
+    public async Task<int> mult(int a, int b)
+    {
+        await Task.Delay(100);
+        return a * b;
     }
 }

@@ -13,103 +13,102 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DupeNukem.ViewModels
+namespace DupeNukem.ViewModels;
+
+internal abstract class CalculatorBase1
 {
-    internal abstract class CalculatorBase1
-    {
-        [CallableTarget]
-        public Task<int> add(int a, int b) =>
-            throw new NotImplementedException("BUG: Fake add is called.");
+    [CallableTarget]
+    public Task<int> add(int a, int b) =>
+        throw new NotImplementedException("BUG: Fake add is called.");
 
-        [CallableTarget("sub")]
-        public Task<int> __sub__123(int a, int b) =>
-            throw new NotImplementedException("BUG: Fake sub is called.");
+    [CallableTarget("sub")]
+    public Task<int> __sub__123(int a, int b) =>
+        throw new NotImplementedException("BUG: Fake sub is called.");
+}
+
+internal abstract class CalculatorBase2 : CalculatorBase1
+{
+    [CallableTarget]
+    public new async Task<int> add(int a, int b)
+    {
+        await Task.Delay(100);
+        return a + b;
+    }
+}
+
+internal sealed class Calculator : CalculatorBase2
+{
+    [CallableTarget("sub")]
+    public new async Task<int> __sub__123(int a, int b)
+    {
+        await Task.Delay(100);
+        return a - b;
     }
 
-    internal abstract class CalculatorBase2 : CalculatorBase1
+    // [CallableTarget]   // couldn't invoke from JavaScript.
+    public async Task<int> mult(int a, int b)
     {
-        [CallableTarget]
-        public new async Task<int> add(int a, int b)
-        {
-            await Task.Delay(100);
-            return a + b;
-        }
+        await Task.Delay(100);
+        return a * b;
     }
 
-    internal sealed class Calculator : CalculatorBase2
+    [CallableTarget]
+    public async Task<int> add_cancellable(int a, int b, CancellationToken token)
     {
-        [CallableTarget("sub")]
-        public new async Task<int> __sub__123(int a, int b)
-        {
-            await Task.Delay(100);
-            return a - b;
-        }
-
-        // [CallableTarget]   // couldn't invoke from JavaScript.
-        public async Task<int> mult(int a, int b)
-        {
-            await Task.Delay(100);
-            return a * b;
-        }
-
-        [CallableTarget]
-        public async Task<int> add_cancellable(int a, int b, CancellationToken token)
-        {
-            await Task.Delay(2000, token);
-            return a + b;
-        }
-
-        [CallableTarget]
-        [Obsolete]
-        public async Task<int> add_obsoleted1(int a, int b)
-        {
-            await Task.Delay(100);
-            return a + b;
-        }
-
-        [CallableTarget]
-        [Obsolete("Obsoleted test")]
-        public async Task<int> add_obsoleted2(int a, int b)
-        {
-            await Task.Delay(100);
-            return a + b;
-        }
-
-        [CallableTarget]
-        [Obsolete("Obsoleted test", true)]
-        public async Task<int> add_obsoleted3(int a, int b)
-        {
-            await Task.Delay(100);
-            return a + b;
-        }
-
-        [CallableTarget]
-        public async Task<int> mulAsync(int a, int b)   // mul(a, b)
-        {
-            await Task.Delay(100);
-            return a * b;
-        }
-
-        [CallableTarget]
-        public async Task<int> willBeThrowAsync(int a, int b)
-        {
-            await Task.Delay(100);
-            throw new WillBeThrowException(a, b);
-        }
+        await Task.Delay(2000, token);
+        return a + b;
     }
 
-    public sealed class WillBeThrowException : Exception
+    [CallableTarget]
+    [Obsolete]
+    public async Task<int> add_obsoleted1(int a, int b)
     {
-        [ExceptionProperty]
-        public readonly int A;
+        await Task.Delay(100);
+        return a + b;
+    }
 
-        [ExceptionProperty]
-        public int B { get; }
+    [CallableTarget]
+    [Obsolete("Obsoleted test")]
+    public async Task<int> add_obsoleted2(int a, int b)
+    {
+        await Task.Delay(100);
+        return a + b;
+    }
 
-        public WillBeThrowException(int a, int b)
-        {
-            this.A = a;
-            this.B = b;
-        }
+    [CallableTarget]
+    [Obsolete("Obsoleted test", true)]
+    public async Task<int> add_obsoleted3(int a, int b)
+    {
+        await Task.Delay(100);
+        return a + b;
+    }
+
+    [CallableTarget]
+    public async Task<int> mulAsync(int a, int b)   // mul(a, b)
+    {
+        await Task.Delay(100);
+        return a * b;
+    }
+
+    [CallableTarget]
+    public async Task<int> willBeThrowAsync(int a, int b)
+    {
+        await Task.Delay(100);
+        throw new WillBeThrowException(a, b);
+    }
+}
+
+public sealed class WillBeThrowException : Exception
+{
+    [ExceptionProperty]
+    public readonly int A;
+
+    [ExceptionProperty]
+    public int B { get; }
+
+    public WillBeThrowException(int a, int b)
+    {
+        this.A = a;
+        this.B = b;
     }
 }

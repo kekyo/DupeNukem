@@ -22,7 +22,7 @@ var __dupeNukem_Messenger__ =
     this.registry__ = new FinalizationRegistry(name => {
         if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
             window.__dupeNukem_Messenger_sendToHostMessage__(
-                JSON.stringify({ id: "discard", type: "closure", body: name, }));
+                JSON.stringify({ id: "discard", type: "metadata", body: name, }));
             this.log__("DupeNukem: Sent discarded closure function: " + name);
         }
     });

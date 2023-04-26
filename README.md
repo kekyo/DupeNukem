@@ -636,6 +636,10 @@ Apache-v2.
 
 ## History
 
+* 0.24.0:
+  * Improved avoidance for another message processor confliction. #18
+  * Fixed causing duplicate OperationCancelledError symbol.
+  * Fixed ignoring closure discarder message.
 * 0.23.0:
   * Re-implemented full-duplex cancellation infrastructure.
 * 0.22.0:

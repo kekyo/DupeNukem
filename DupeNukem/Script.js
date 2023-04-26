@@ -372,15 +372,20 @@ var delay =
 
 //////////////////////////////////////////////////
 
-class OperationCancelledError extends Error {
-    constructor(...args) {
-        super(...args);
-        this.name = this.constructor.name;
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, OperationCancelledError);
+// OperationCancelledError declaration.
+var OperationCancelledError =
+    OperationCancelledError || (function () {
+        function OperationCancelledError(...args) {
+            Error.apply(this, args);
+            this.name = this.constructor.name;
+            if (Error.captureStackTrace) {
+                Error.captureStackTrace(this, OperationCancelledError);
+            }
         }
-    }
-}
+        OperationCancelledError.prototype = Object.create(Error.prototype);
+        OperationCancelledError.prototype.constructor = OperationCancelledError;
+        return OperationCancelledError;
+})();
 
 // CancellationToken declaration.
 var CancellationToken =

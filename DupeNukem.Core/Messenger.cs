@@ -280,7 +280,11 @@ public class Messenger : IMessenger, IDisposable
         if (this.SendRequest is { } sendRequest)
         {
             await this.SynchContext.Bind();
-            sendRequest(this, new SendRequestEventArgs(jsonString));
+
+            // Guard identity (Avoiding another processor message).
+            var message = "__dupeNukem__" + jsonString;
+
+            sendRequest(this, new SendRequestEventArgs(message));
         }
         else
         {
@@ -460,9 +464,15 @@ public class Messenger : IMessenger, IDisposable
 
     public async void ReceivedRequest(string jsonString)
     {
+        // Guard identity (Avoiding another processor message).
+        if (!jsonString.StartsWith("__dupeNukem__"))
+        {
+            return;
+        }
+
         try
         {
-            var tr = new StringReader(jsonString);
+            var tr = new StringReader(jsonString.Substring(13));
             var message = (Message)this.Serializer.Deserialize(tr, typeof(Message))!;
 
             switch (message.Type)

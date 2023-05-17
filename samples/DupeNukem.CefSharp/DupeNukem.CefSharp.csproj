@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
+    <ProjectReference Include="..\DupeNukem.Sample.Common\DupeNukem.Sample.Common.csproj" />
   </ItemGroup>
 
 </Project>

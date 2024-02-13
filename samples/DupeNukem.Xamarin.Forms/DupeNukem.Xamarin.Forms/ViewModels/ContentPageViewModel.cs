@@ -36,7 +36,7 @@ namespace DupeNukem.ViewModels
         public string? Url { get; private set; }
 
         public Pile<FormsWebView> WebViewPile { get; } =
-            PileFactory.Create<FormsWebView>();
+            Pile.Factory.Create<FormsWebView>();
 
         public ContentPageViewModel()
         {
@@ -50,7 +50,7 @@ namespace DupeNukem.ViewModels
             // ----
 
             // ContentPage.Appearing:
-            this.Ready = CommandFactory.Create<EventArgs>(async _ =>
+            this.Ready = Command.Factory.Create<EventArgs>(async _ =>
             {
                 await this.WebViewPile.RentAsync(formsWebView =>
                 {

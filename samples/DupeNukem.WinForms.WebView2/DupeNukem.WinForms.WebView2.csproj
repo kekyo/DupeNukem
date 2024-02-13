@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1774.30" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2277.86" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 

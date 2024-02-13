@@ -37,7 +37,7 @@ namespace DupeNukem.Internal
                 {
                     this.Collect();
                 }
-            }, null, 0, 0);
+            }, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public void Register(object obj, string id)
@@ -63,7 +63,7 @@ namespace DupeNukem.Internal
         {
             lock (this.objects)
             {
-                this.timer.Change(0, 0);
+                this.timer.Change(Timeout.Infinite, Timeout.Infinite);
                 this.objects.Clear();
                 this.waitForCollectedThreshold = false;
             }
@@ -83,7 +83,7 @@ namespace DupeNukem.Internal
 
             if (this.objects.Count == 0)
             {
-                this.timer.Change(0, 0);
+                this.timer.Change(Timeout.Infinite, Timeout.Infinite);
             }
             if (this.objects.Count < checkWhenReached)
             {

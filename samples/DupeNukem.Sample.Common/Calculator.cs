@@ -9,11 +9,16 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+// This is a test code to verify that the .NET implementation of the `Calculator` class
+// can be called from the JavaScript side.
+// There are various variations of the implementation, each of which is tested by calling it
+// from the JavaScript side. The JavaScript call code is implemented in `TestModel.AddTestJavaScriptCode()`.
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DupeNukem.WinForms.WebView2;
+namespace DupeNukem.Models;
 
 internal abstract class CalculatorBase1
 {

@@ -604,6 +604,8 @@ Apache-v2.
 
 ## History
 
+* 0.22.10:
+  * Fixed race condition when DupeNukem GC trimmer has arrived.
 * 0.22.0:
   * Supported callback delegates/functions on the arguments.
 * 0.21.0:

@@ -144,6 +144,14 @@ public sealed class TestModel
             var result_callback2 = await messenger.InvokePeerMethodAsync<string>("js_callback2", 1, 2, callback2);
             Trace.WriteLine($"js_callback2: {result_callback2}");
 
+            // Test .NET --> JavaScript class member
+            var result_jscalc_add = await messenger.InvokePeerMethodAsync<int>(
+                "jscalc.add", 1, 2);
+            Trace.WriteLine($"jscalc.add: {result_jscalc_add}");
+            var result_jscalc_sub = await messenger.InvokePeerMethodAsync<int>(
+                "jscalc.sub", 1, 2);
+            Trace.WriteLine($"jscalc.sub: {result_jscalc_sub}");
+
             Trace.WriteLine("ALL TEST IS DONE AT .NET SIDE.");
         };
     }
@@ -162,6 +170,12 @@ public sealed class TestModel
         script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
         script.AppendLine("async function js_callback2(a, b, cb) { return await cb(a, b, new CancellationToken()); }");
         script.AppendLine("async function js_delay(v, ct) { await delay(v, ct); return v.toString(); }");
+
+        script.AppendLine("class JSCalculator {");
+        script.AppendLine("  async add(a, b) { return a + b; }");
+        script.AppendLine("  async sub(a, b) { return a - b; }");
+        script.AppendLine("};");
+        script.AppendLine("var jscalc = new JSCalculator();");
 
         // Invoke JavaScript --> .NET methods:
         script.AppendLine("var tester = async () => {");

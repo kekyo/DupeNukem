@@ -27,7 +27,7 @@ namespace DupeNukem.ViewModels
         public string? Url { get; private set; }
 
         public Pile<ChromiumWebBrowser> CefSharpPile { get; } =
-            PileFactory.Create<ChromiumWebBrowser>();
+            Pile.Factory.Create<ChromiumWebBrowser>();
 
         public MainWindowViewModel()
         {
@@ -37,7 +37,7 @@ namespace DupeNukem.ViewModels
             // ----
 
             // MainWindow.Loaded:
-            this.Loaded = CommandFactory.Create<EventArgs>(async _ =>
+            this.Loaded = Command.Factory.Create<EventArgs>(async _ =>
             {
                 await this.CefSharpPile.RentAsync(cefSharp =>
                 {

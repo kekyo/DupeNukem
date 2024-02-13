@@ -29,7 +29,7 @@ namespace DupeNukem.ViewModels
         public Uri? Url { get; private set; }
 
         public Pile<Microsoft.Web.WebView2.Wpf.WebView2> WebView2Pile { get; } =
-            PileFactory.Create<Microsoft.Web.WebView2.Wpf.WebView2>();
+            Pile.Factory.Create<Microsoft.Web.WebView2.Wpf.WebView2>();
 
         public MainWindowViewModel()
         {
@@ -39,7 +39,7 @@ namespace DupeNukem.ViewModels
             // ----
 
             // MainWindow.Loaded:
-            this.Loaded = CommandFactory.Create<EventArgs>(async _ =>
+            this.Loaded = Command.Factory.Create<EventArgs>(async _ =>
             {
                 await this.WebView2Pile.RentAsync(async webView2 =>
                 {

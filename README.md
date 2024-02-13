@@ -636,6 +636,8 @@ Apache-v2.
 
 ## History
 
+* 0.25.0, 0.22.10:
+  * Fixed race condition when DupeNukem GC trimmer has arrived.
 * 0.24.0:
   * Improved avoidance for another message processor confliction. #18
   * Fixed causing duplicate OperationCancelledError symbol.

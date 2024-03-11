@@ -11,8 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="Epoxy.Wpf" Version="1.12.0" />
-    <PackageReference Include="CefSharp.Wpf" Version="121.3.70" />
+    <PackageReference Include="Epoxy.Wpf" Version="1.13.0" />
+    <PackageReference Include="CefSharp.Wpf" Version="121.3.130" />
   </ItemGroup>
 
   <ItemGroup>

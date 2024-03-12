@@ -9,17 +9,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-using System.Windows;
+using Microsoft.Maui.Controls;
 
-namespace DupeNukem.Views;
+namespace DupeNukem.Maui.Views;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+public partial class MainPage : ContentPage
 {
-    public MainWindow()
-    {
-        InitializeComponent();
-    }
+    public MainPage() =>
+        this.InitializeComponent();
 }

@@ -282,12 +282,18 @@ var __dupeNukem_Messenger__ =
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
         console.info("DupeNukem: CefSharp detected.");
     }
+    else if (window.__dupeNukem_Messenger_host__ != undefined &&
+        window.__dupeNukem_Messenger_host__.__sendToHostMessage__ != undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ =
+            m => window.__dupeNukem_Messenger_host__.__sendToHostMessage__(m);
+        console.info("DupeNukem: Ready to host managed [1].");
+    }
     else if (window.__dupeNukem_Messenger_sendToHostMessage__ != undefined) {
-        console.info("DupeNukem: Ready to host managed.");
+        console.info("DupeNukem: Ready to host managed [2].");
     }
 })();
 
-var __peerClosures__ = new Object();
+var __peerClosures__ = __peerClosures__ || new Object();
 
 var __dupeNukem_invokeHostMethod__ =
     __dupeNukem_invokeHostMethod__ || function (entry) {

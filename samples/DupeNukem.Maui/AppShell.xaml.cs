@@ -9,16 +9,13 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-using System.Windows;
+using Microsoft.Maui.Controls;
 
-namespace DupeNukem.Views;
+namespace DupeNukem.Maui;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+public partial class AppShell : Shell
 {
-    public MainWindow()
+    public AppShell()
     {
         InitializeComponent();
     }

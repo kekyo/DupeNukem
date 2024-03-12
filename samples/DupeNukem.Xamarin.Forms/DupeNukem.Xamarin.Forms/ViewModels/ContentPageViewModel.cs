@@ -51,14 +51,13 @@ namespace DupeNukem.ViewModels
                         // Marshal to main thread.
                         if (await UIThread.TryBind())
                         {
-                            Application.Current.Dispatcher.BeginInvokeOnMainThread(() =>
-                                formsWebView.InjectJavascriptAsync(e.ToJavaScript()));
+                            await formsWebView.InjectJavascriptAsync(e.ToJavaScript());
                         }
                     };
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     formsWebView.AddLocalCallback(
-                        messenger.PostMessageSymbolName,
+                        WebViewMessenger.PostMessageSymbolName,
                         messenger.ReceivedRequest);
 
                     // Step 4: Injected Messenger script.

@@ -52,8 +52,13 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
-        public string PostMessageSymbolName =>
+        public const string PostMessageSymbolName =
             "__dupeNukem_Messenger_sendToHostMessage__";
+
+        public const string PostMessageHostObjectName =
+            "__dupeNukem_Messenger_host__";
+        public const string PostMessageHostSymbolName =
+            "__sendToHostMessage__";
 
         public StringBuilder GetInjectionScript(bool debugLog = false)
         {

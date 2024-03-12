@@ -73,6 +73,7 @@ Here is an example using:
 * [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
 * [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
 * [`Xamarin.Forms`(`Xam.Plugin.WebView`)](https://www.nuget.org/packages/Xam.Plugin.WebView). ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Xamarin.Forms/ViewModels/ContentPageViewModel.cs))
+* `.NET MAUI`. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Maui/))
 
 ----
 
@@ -553,13 +554,58 @@ messenger.SendRequest += (s, e) =>
 
 // Step 3: Attached JavaScript --> .NET message handler.
 formsWebView.AddLocalCallback(
-    messenger.PostMessageSymbolName,
+    WebViewMessenger.PostMessageSymbolName,
     messenger.ReceivedRequest);
 
 // Step 4: Injected Messenger script.
 var script = messenger.GetInjectionScript();
 formsWebView.OnNavigationCompleted += (s, url) =>
     formsWebView.InjectJavascriptAsync(script.ToString());
+```
+
+### .NET MAUI
+
+.NET MAUI has a standard `WebView` control.
+However, this control lacks for sending messages from JavaScript to .NET.
+
+Therefore, you will need to implement these glue codes for each platform yourself.
+Examples for Windows and Android are placed in the sample code for your reference.
+
+* [.NET MAUI sample project](samples/DupeNukem.Maui/)
+
+The following is a rough outline of the work required to achieve this:
+
+1. implement a `JavaScriptMultiplexedWebView` control derived from `WebView` that can receive messages from JavaScript.
+2. implement a platform specific handler `JavaScriptMultiplexedWebViewHandler` for the above control.
+3. Register the above handler at application startup.
+
+Once these are in place, you can set up DupeNukem as follows:
+
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += async (s, e) =>
+{
+    // Marshal to main thread.
+    if (await UIThread.TryBind())
+    {
+        await webView.InvokeJavaScriptAsync(e.ToJavaScript());
+    }
+};
+
+// Step 3: Attached JavaScript --> .NET message handler.
+webView.MessageReceived += (s, e) => messenger.ReceivedRequest(e.Message);
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript(true);
+webView.Navigated += (s, e) =>
+{
+    if (e.Source is UrlWebViewSource eu &&
+        webView.Source is UrlWebViewSource wu &&
+        eu.Url == wu.Url)
+    {
+        webView.InvokeJavaScriptAsync(script.ToString());
+    }
+};
 ```
 
 ### Celenium WebDriver on .NET

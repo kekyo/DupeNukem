@@ -9,17 +9,21 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-using System.Windows;
+using Android.App;
+using Android.Runtime;
+using Microsoft.Maui;
+using Microsoft.Maui.Hosting;
+using System;
 
-namespace DupeNukem.Views;
+namespace DupeNukem.Maui;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+[Application]
+public class MainApplication : MauiApplication
 {
-    public MainWindow()
+    public MainApplication(IntPtr handle, JniHandleOwnership ownership)
+        : base(handle, ownership)
     {
-        InitializeComponent();
     }
+
+    protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 }

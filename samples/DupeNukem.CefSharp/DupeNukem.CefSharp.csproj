@@ -20,4 +20,9 @@
     <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\Calculator.cs" LinkBase="ViewModels" />
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\TestFragments.cs" LinkBase="ViewModels" />
+  </ItemGroup>
+
 </Project>

@@ -12,6 +12,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace DupeNukem.ViewModels;
 
@@ -33,6 +34,21 @@ internal abstract class CalculatorBase2 : CalculatorBase1
     {
         await Task.Delay(100);
         return a + b;
+    }
+}
+
+internal sealed class CalculationModel
+{
+    public int a;
+    public int b;
+    public CancellationToken ct;
+
+    [JsonConstructor]
+    public CalculationModel(int a, int b, CancellationToken ct)
+    {
+        this.a = a;
+        this.b = b;
+        this.ct = ct;
     }
 }
 
@@ -95,6 +111,21 @@ internal sealed class Calculator : CalculatorBase2
     {
         await Task.Delay(100);
         throw new WillBeThrowException(a, b);
+    }
+
+    [CallableTarget]
+    public async Task<int> nested_cancellable(CalculationModel model)
+    {
+        try
+        {
+            await Task.Delay(2000, model.ct);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        return model.a + model.b;
     }
 }
 

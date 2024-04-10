@@ -179,10 +179,16 @@ internal sealed class MainWindowViewModel
                 Task.FromResult($"{a}-{b}");
             var result_callback = await messenger.InvokePeerMethodAsync<string>("js_callback", 1, 2, callback);
             Trace.WriteLine($"js_callback: {result_callback}");
+            
             Func<int, int, CancellationToken, Task<string>> callback2 = (a, b, ct) =>
                 Task.FromResult($"{a}-{b}");
             var result_callback2 = await messenger.InvokePeerMethodAsync<string>("js_callback2", 1, 2, callback2);
             Trace.WriteLine($"js_callback2: {result_callback2}");
+            
+            Func<int, int, CancellationToken, Task<string>> callback3 = (a, b, ct) =>
+                Task.FromResult($"{a}-{b}");
+            var result_callback3 = await messenger.InvokePeerMethodAsync<string>("js_callback3", 1, 2, callback3);
+            Trace.WriteLine($"js_callback3: {result_callback3}");
 
             Trace.WriteLine("ALL TEST IS DONE AT .NET SIDE.");
         };
@@ -201,6 +207,7 @@ internal sealed class MainWindowViewModel
         script.AppendLine("async function js_array(a) { console.log('js_array(' + a + ')'); return ['Print', 13, 27]; }");
         script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
         script.AppendLine("async function js_callback2(a, b, cb) { return await cb(a, b, new CancellationToken()); }");
+        script.AppendLine("async function js_callback3(a, b, cb) { return await cb(a, b, new AbortController().signal); }");
 
         // Invoke JavaScript --> .NET methods:
         script.AppendLine("var tester = async () => {");
@@ -260,6 +267,21 @@ internal sealed class MainWindowViewModel
         script.AppendLine("    console.log('BUG detected [calc.add_cancellable2]');");
         script.AppendLine("  } catch (e) {");
         script.AppendLine("    console.log('PASS: Operation canceled [calc.add_cancellable2]');");
+        script.AppendLine("  }");
+
+        script.AppendLine("  const ac1 = new AbortController();");
+        script.AppendLine("  const result_calc_add_cancellable1_as = await invokeHostMethod('calc.add_cancellable', 1, 2, ac1.signal);");
+        script.AppendLine("  console.log('calc.add_cancellable1_as: ' + result_calc_add_cancellable1_as);");
+
+        script.AppendLine("  const ac2 = new AbortController();");
+        script.AppendLine("  const result_calc_add_cancellable2_p_as = invokeHostMethod('calc.add_cancellable', 1, 2, ac2.signal);");
+        script.AppendLine("  await delay(1000);");
+        script.AppendLine("  ac2.abort();");
+        script.AppendLine("  try {");
+        script.AppendLine("    await result_calc_add_cancellable2_p_as;");
+        script.AppendLine("    console.log('BUG detected [calc.add_cancellable2_as]');");
+        script.AppendLine("  } catch (e) {");
+        script.AppendLine("    console.log('PASS: Operation canceled [calc.add_cancellable2_as]');");
         script.AppendLine("  }");
 
         script.AppendLine("  const result_fullName_proxy_calc_add = await dupeNukem.viewModels.calculator.add(1, 2);");

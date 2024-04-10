@@ -68,7 +68,7 @@ var __dupeNukem_Messenger__ =
                 case "succeeded":
                     this.log__("DupeNukem: succeeded: " + message.id);
                     const successorDescriptor = this.suspendings__.get(message.id);
-                    if (successorDescriptor != undefined) {
+                    if (successorDescriptor !== undefined) {
                         this.suspendings__.delete(message.id);
                         successorDescriptor.resolve(message.body);
                     }
@@ -79,7 +79,7 @@ var __dupeNukem_Messenger__ =
                 case "failed":
                     this.log__("DupeNukem: failed: " + message.id);
                     const failureDescriptor = this.suspendings__.get(message.id);
-                    if (failureDescriptor != undefined) {
+                    if (failureDescriptor !== undefined) {
                         this.suspendings__.delete(message.id);
                         const e = new Error(message.body.message);
                         e.name = message.body.name;
@@ -97,10 +97,10 @@ var __dupeNukem_Messenger__ =
                         const ne = message.body.name.split(".");
                         const ti = ne.
                             slice(0, ne.length - 1).
-                            reduce(function (o, n) {
-                                if (o != undefined) {
+                            reduce((o, n) => {
+                                if (o !== undefined) {
                                     const next = o[n];
-                                    if (next == undefined) {
+                                    if (next === undefined) {
                                         this.sendExceptionToHost__(message, { name: "invalidFieldName", message: "Field \"" + n + "\" is not found.", detail: "", });
                                     }
                                     return next;
@@ -109,10 +109,10 @@ var __dupeNukem_Messenger__ =
                                     return o;
                                 }
                             }, window);
-                        if (ti != undefined) {
+                        if (ti !== undefined) {
                             const fn = ne[ne.length - 1];
                             const f = ti[fn];
-                            if (f == undefined) {
+                            if (f === undefined) {
                                 this.sendExceptionToHost__(message, { name: "invalidFunctionName", message: "Function \"" + fn + "\" is not found.", detail: "", });
                             }
                             else {
@@ -120,7 +120,7 @@ var __dupeNukem_Messenger__ =
                                     arg => {
                                         if (arg == null) {
                                             return null;
-                                        } else if (arg.id == "descriptor" && arg.type == "closure" && arg.body?.startsWith("closure_$")) {
+                                        } else if (arg.id === "descriptor" && arg.type === "closure" && arg.body?.startsWith("closure_$")) {
                                             const name = arg.body;
                                             const cb = function () {
                                                 const args = new Array(arguments.length);
@@ -175,19 +175,44 @@ var __dupeNukem_Messenger__ =
             console.warn("DupeNukem: unknown error: " + e.message + ": " + jsonString);
         }
     };
+    
+    this.new_cto__ = (aborted) => {
+        const scope = "cancellationToken_" + (this.id__++);
+        return {
+            __scope__: scope,
+            __aborted__: aborted,
+        };
+    };
+
+    this.normalizeObjects__ = obj => {
+        if (obj instanceof Function) {
+            const baseName = "closure_$" + (this.id__++);
+            window.__peerClosures__[baseName] = obj;
+            const name = "__peerClosures__." + baseName;
+            return {id: "descriptor", type: "closure", body: name,};
+        } else if (obj instanceof Array) {
+            return obj.map(this.normalizeObjects__);
+        } else if (obj instanceof AbortSignal) {
+            const cto = this.new_cto__(obj.aborted);
+            if (!obj.aborted) {
+                obj.addEventListener(
+                    "abort",
+                    () => window.invokeHostMethod(cto.__scope__ + ".cancel"));
+            }
+            return cto;
+        } else if (obj instanceof Object) {
+            const newobj = {};
+            for (const [k, v] of Object.entries(obj)) {
+                newobj[k] = this.normalizeObjects__(v);
+            }
+            return newobj;
+        } else {
+            return obj;
+        }
+    }
 
     this.invokeHostMethod__ = (name, args) => {
-        const rargs = args.map(arg => {
-            if (typeof arg == "function") {
-                const baseName = "closure_$" + (this.id__++);
-                window.__peerClosures__[baseName] = arg;
-                const name = "__peerClosures__." + baseName;
-                return { id: "descriptor", type: "closure", body: name, };
-            } else {
-                return arg;
-            }
-        });
-
+        const rargs = args.map(this.normalizeObjects__);
         return new Promise((resolve, reject) => {
             const id = "client_" + (this.id__++);
             try {
@@ -205,8 +230,8 @@ var __dupeNukem_Messenger__ =
         let current = window;
         for (const name of names.slice(0, names.length - 1)) {
             let next = current[name];
-            if (next == undefined) {
-                next = new Object();
+            if (next === undefined) {
+                next = {};
                 Object.defineProperty(current, name, {
                     value: next,
                     writable: false,
@@ -228,8 +253,8 @@ var __dupeNukem_Messenger__ =
         let current = window;
         for (const name of ne.slice(0, ne.length - 1)) {
             let next = current[name];
-            if (next == undefined) {
-                next = new Object();
+            if (next === undefined) {
+                next = {};
                 Object.defineProperty(current, name, {
                     value: next,
                     writable: false,
@@ -255,7 +280,7 @@ var __dupeNukem_Messenger__ =
         let current = window;
         for (const name of ne.slice(0, ne.length - 1)) {
             let next = current[name];
-            if (next == undefined) {
+            if (next === undefined) {
                 return;
             }
             current = next;
@@ -264,45 +289,45 @@ var __dupeNukem_Messenger__ =
         delete current[fn];
     }
 
-    if (window.external != undefined &&
-        window.external.notify != undefined) {
+    if (window.external !== undefined &&
+        window.external.notify !== undefined) {
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
         console.info("DupeNukem: Microsoft WebView1 detected.");
     }
-    else if (window.chrome != undefined &&
-        window.chrome.webview != undefined &&
-        window.chrome.webview.postMessage != undefined) {
+    else if (window.chrome !== undefined &&
+        window.chrome.webview !== undefined &&
+        window.chrome.webview.postMessage !== undefined) {
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.chrome.webview.postMessage;
         window.chrome.webview.addEventListener(
             "message", e => { this.arrivedHostMesssage__(e.data); });
         console.info("DupeNukem: Microsoft WebView2 detected.");
     }
-    else if (window.CefSharp != undefined &&
-        window.CefSharp.PostMessage != undefined) {
+    else if (window.CefSharp !== undefined &&
+        window.CefSharp.PostMessage !== undefined) {
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
         console.info("DupeNukem: CefSharp detected.");
     }
-    else if (window.__dupeNukem_Messenger_host__ != undefined &&
-        window.__dupeNukem_Messenger_host__.__sendToHostMessage__ != undefined) {
+    else if (window.__dupeNukem_Messenger_host__ !== undefined &&
+        window.__dupeNukem_Messenger_host__.__sendToHostMessage__ !== undefined) {
         window.__dupeNukem_Messenger_sendToHostMessage__ =
             m => window.__dupeNukem_Messenger_host__.__sendToHostMessage__(m);
         console.info("DupeNukem: Ready to host managed [1].");
     }
-    else if (window.__dupeNukem_Messenger_sendToHostMessage__ != undefined) {
+    else if (window.__dupeNukem_Messenger_sendToHostMessage__ !== undefined) {
         console.info("DupeNukem: Ready to host managed [2].");
     }
 })();
 
-var __peerClosures__ = __peerClosures__ || new Object();
+var __peerClosures__ = __peerClosures__ || {};
 
 var __dupeNukem_invokeHostMethod__ =
     __dupeNukem_invokeHostMethod__ || function (entry) {
         const name = entry.name;
         const obsolete = entry.obsolete;
-        if (obsolete == "obsolete") {
+        if (obsolete === "obsolete") {
             console.warn(entry.obsoleteMessage);
         }
-        else if (obsolete == "error") {
+        else if (obsolete === "error") {
             throw new Error(entry.obsoleteMessage);
         }
         const args = new Array(arguments.length - 1);
@@ -338,8 +363,12 @@ var delay =
 // CancellationToken declaration.
 var CancellationToken =
     CancellationToken || function () {
+        const warn = function () {
+            console.warn("DupeNukem: CancellationToken is obsoleted, will be removed in future release. You have to switch to use AbortController and AbortSignal on ECMAScript standard instead.");
+        }
         this.__scope__ = "cancellationToken_" + (window.__dupeNukem_Messenger__.id__++);
-        this.cancel = () => invokeHostMethod(this.__scope__ + ".cancel");
+        this.cancel = () => { warn(); window.invokeHostMethod(this.__scope__ + ".cancel"); };
+        warn();
     };
 
 //////////////////////////////////////////////////

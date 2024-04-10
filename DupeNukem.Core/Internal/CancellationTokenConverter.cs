@@ -31,6 +31,9 @@ namespace DupeNukem.Internal
             public CancellationToken Token =>
                 this.cts.Token;
 
+            internal void Cancel() =>
+                this.cts.Cancel();
+
             [CallableTarget("cancel")]
             public Task CancelAsync()
             {
@@ -52,6 +55,14 @@ namespace DupeNukem.Internal
                 // CancellationTokenSource.Cancel() is called which is held internally.
                 var ctp = new CancellationTokenProxy();
                 DeserializingRegisteredObjectRegistry.TryCapture(body.Scope, ctp);
+
+                // Already aborted:
+                if (body.Aborted)
+                {
+                    // Cancel now.
+                    ctp.Cancel();
+                }
+                
                 return ctp.Token;
             }
             else

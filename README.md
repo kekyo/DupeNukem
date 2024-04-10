@@ -650,8 +650,20 @@ Apache-v2.
 
 ## History
 
-* 0.22.10:
+* 0.26.0:
+  * Added MAUI sample project.
+  * Switched cancellation object to `AbortSignal` ECMAScript standard object instead of `CancellationToken`.
+    * You can continue to use `CancellationToken` now, but marked obsoleted and will be removed in future release.
+  * Rolled back full-duplex cancellation infrastructure (in 0.23.0), because it is buggy.
+  * Replaced implementation on 0.22 branch based.
+* 0.25.0, 0.22.10:
   * Fixed race condition when DupeNukem GC trimmer has arrived.
+* 0.24.0:
+  * Improved avoidance for another message processor confliction. #18
+  * Fixed causing duplicate OperationCancelledError symbol.
+  * Fixed ignoring closure discarder message.
+* 0.23.0:
+  * Re-implemented full-duplex cancellation infrastructure.
 * 0.22.0:
   * Supported callback delegates/functions on the arguments.
 * 0.21.0:

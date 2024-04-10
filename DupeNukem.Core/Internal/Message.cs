@@ -91,8 +91,14 @@ namespace DupeNukem.Internal
         [JsonProperty("__scope__")]
         public readonly string Scope;
 
+        [JsonProperty("__aborted__")]
+        public readonly bool Aborted;
+
         [JsonConstructor]
-        public CancellationTokenBody(string id) =>
-            this.Scope = id;
+        public CancellationTokenBody(string __scope__, bool __aborted__)
+        {
+            this.Scope = __scope__;
+            this.Aborted = __aborted__;
+        }
     }
 }

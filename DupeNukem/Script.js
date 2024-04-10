@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////
+﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // messaging library between .NET and JavaScript.
@@ -17,21 +17,13 @@ var __dupeNukem_Messenger__ =
     this.id__ = 0;
     this.debugLog__ = false;
     this.isInitialized__ = false;
-    this.ctss__ = new Map();
-
-    this.sendToHostMessage__ = function (jsonMessage) {
-        const sendTo = window.__dupeNukem_Messenger_sendToHostMessage__;
-        if (sendTo != undefined) {
-            // Guard identity (Avoiding another processor message).
-            const message = "__dupeNukem__" + jsonMessage;
-            sendTo(message);
-        }
-    }
 
     this.registry__ = new FinalizationRegistry(name => {
-        this.sendToHostMessage__(
-            JSON.stringify({ id: "discard", type: "metadata", body: name, }));
-        this.log__("DupeNukem: Sent discarded closure function: " + name);
+        if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+            window.__dupeNukem_Messenger_sendToHostMessage__(
+                JSON.stringify({ id: "discard", type: "closure", body: name, }));
+            this.log__("DupeNukem: Sent discarded closure function: " + name);
+        }
     });
 
     this.log__ = (message) => {
@@ -43,15 +35,15 @@ var __dupeNukem_Messenger__ =
     this.initialize__ = () => {
         if (!this.isInitialized__) {
             this.isInitialized__ = true;
-            if (window.__dupeNukem_Messenger__.sendToHostMessage__ != null) {
-                window.__dupeNukem_Messenger__.sendToHostMessage__(
+            if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
+                window.__dupeNukem_Messenger_sendToHostMessage__(
                     JSON.stringify({ id: "ready", type: "control", body: null, }));
             }
             else {
                 const innerInit = function () {
-                    if (window.__dupeNukem_Messenger__.sendToHostMessage__ != null) {
+                    if (window.__dupeNukem_Messenger_sendToHostMessage__ != null) {
                         console.info("DupeNukem: Ready by host managed.");
-                        window.__dupeNukem_Messenger__.sendToHostMessage__(
+                        window.__dupeNukem_Messenger_sendToHostMessage__(
                             JSON.stringify({ id: "ready", type: "control", body: null, }));
                     }
                     else {
@@ -65,17 +57,13 @@ var __dupeNukem_Messenger__ =
     };
 
     this.sendExceptionToHost__ = (message, exceptionBody) => {
-        window.__dupeNukem_Messenger__.sendToHostMessage__(JSON.stringify(
+        window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify(
             { id: message.id, type: "failed", body: exceptionBody, }))
     };
 
     this.arrivedHostMesssage__ = (jsonString) => {
-        // Guard identity (Avoiding another processor message).
-        if (!jsonString.startsWith("__dupeNukem__")) {
-            return;
-        }
         try {
-            const message = JSON.parse(jsonString.substring(13));
+            const message = JSON.parse(jsonString);
             switch (message.type) {
                 case "succeeded":
                     this.log__("DupeNukem: succeeded: " + message.id);
@@ -132,43 +120,23 @@ var __dupeNukem_Messenger__ =
                                     arg => {
                                         if (arg == null) {
                                             return null;
-                                        } else if (arg.type == "metadata") {
+                                        } else if (arg.id == "descriptor" && arg.type == "closure" && arg.body?.startsWith("closure_$")) {
                                             const name = arg.body;
-                                            switch (arg.id) {
-                                                case "closure":
-                                                    if (name.startsWith("closure_$")) {
-                                                        const cb = function () {
-                                                            const args = new Array(arguments.length);
-                                                            for (let i = 0; i < args.length; i++) {
-                                                                args[i] = arguments[i];
-                                                            }
-                                                            return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
-                                                        };
-                                                        this.registry__.register(cb, name);
-                                                        return cb;
-                                                    }
-                                                    break;
-                                                case "cancellationToken":
-                                                    if (name.startsWith("cancellationToken_$")) {
-                                                        let wr = this.ctss__.get(name);
-                                                        let ct = wr?.deref();
-                                                        if (ct != undefined) {
-                                                            return ct;
-                                                        }
-                                                        ct = new CancellationToken(name);
-                                                        wr = new WeakRef(ct);
-                                                        this.ctss__.set(name, wr);
-                                                        return ct;
-                                                    }
-                                                    break;
-                                            }
-                                            return undefined;
+                                            const cb = function () {
+                                                const args = new Array(arguments.length);
+                                                for (let i = 0; i < args.length; i++) {
+                                                    args[i] = arguments[i];
+                                                }
+                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
+                                            };
+                                            this.registry__.register(cb, name);
+                                            return cb;
                                         } else {
                                             return arg;
                                         }
                                     });
                                 f.apply(ti, args).
-                                    then(result => window.__dupeNukem_Messenger__.sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
+                                    then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
                                     catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }
                         }
@@ -188,8 +156,8 @@ var __dupeNukem_Messenger__ =
                             break;
                     }
                     break;
-                case "metadata":
-                    this.log__("DupeNukem: metadata: " + message.id + ": " + message.body);
+                case "closure":
+                    this.log__("DupeNukem: closure: " + message.id + ": " + message.body);
                     switch (message.id) {
                         case "discard":
                             // Decline invalid name to avoid security attacks.
@@ -197,24 +165,6 @@ var __dupeNukem_Messenger__ =
                                 const baseName = message.body.substring(17);
                                 delete window.__peerClosures__[baseName];
                                 this.log__("DupeNukem: Deleted peer closure target function: " + baseName);
-                            }
-                            break;
-                        case "cancel":
-                            if (message.body.startsWith("cancellationToken_$")) {
-                                const name = message.body;
-                                let wr = this.ctss__.get(name);
-                                let ct = wr?.deref();
-                                if (ct == undefined) {
-                                    ct = new CancellationToken(name);
-                                    ct.__isCanceled__ = true;
-                                    wr = new WeakRef(ct);
-                                    this.ctss__.set(name, wr);
-                                } else if (!ct.__isCanceled__) {
-                                    ct.__isCanceled__ = true;
-                                    if (ct.__action__ != undefined) {
-                                        ct.__action__();
-                                    }
-                                }
                             }
                             break;
                     }
@@ -232,11 +182,10 @@ var __dupeNukem_Messenger__ =
                 const baseName = "closure_$" + (this.id__++);
                 window.__peerClosures__[baseName] = arg;
                 const name = "__peerClosures__." + baseName;
-                return { id: "closure", type: "metadata", body: name, };
-            } else if (arg?.__ctid__ != undefined) {
-                return { id: "cancellationToken", type: "metadata", body: arg.__ctid__, };
+                return { id: "descriptor", type: "closure", body: name, };
+            } else {
+                return arg;
             }
-            return arg;
         });
 
         return new Promise((resolve, reject) => {
@@ -244,7 +193,7 @@ var __dupeNukem_Messenger__ =
             try {
                 const descriptor = { resolve: resolve, reject: reject, };
                 this.suspendings__.set(id, descriptor);
-                window.__dupeNukem_Messenger__.sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: rargs, }, }));
+                window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: id, type: "invoke", body: { name: name, args: rargs, }, }));
             }
             catch (e) {
                 reject(e);
@@ -315,7 +264,6 @@ var __dupeNukem_Messenger__ =
         delete current[fn];
     }
 
-    // Initialize:
     if (window.external != undefined &&
         window.external.notify != undefined) {
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.external.notify;
@@ -334,12 +282,18 @@ var __dupeNukem_Messenger__ =
         window.__dupeNukem_Messenger_sendToHostMessage__ = window.CefSharp.PostMessage;
         console.info("DupeNukem: CefSharp detected.");
     }
+    else if (window.__dupeNukem_Messenger_host__ != undefined &&
+        window.__dupeNukem_Messenger_host__.__sendToHostMessage__ != undefined) {
+        window.__dupeNukem_Messenger_sendToHostMessage__ =
+            m => window.__dupeNukem_Messenger_host__.__sendToHostMessage__(m);
+        console.info("DupeNukem: Ready to host managed [1].");
+    }
     else if (window.__dupeNukem_Messenger_sendToHostMessage__ != undefined) {
-        console.info("DupeNukem: Ready to host managed.");
+        console.info("DupeNukem: Ready to host managed [2].");
     }
 })();
 
-var __peerClosures__ = new Object();
+var __peerClosures__ = __peerClosures__ || new Object();
 
 var __dupeNukem_invokeHostMethod__ =
     __dupeNukem_invokeHostMethod__ || function (entry) {
@@ -373,64 +327,19 @@ var invokeHostMethod =
 
 // Task.Delay like function
 var delay =
-    delay || function (msec, ct) {
+    delay || function (msec) {
     return new Promise(function (resolve, reject) {
-        if (ct != undefined) {
-            ct.register(() => reject(new OperationCancelledError()));
-        }
         setTimeout(resolve, msec);
     });
 }
 
 //////////////////////////////////////////////////
 
-// OperationCancelledError declaration.
-var OperationCancelledError =
-    OperationCancelledError || (function () {
-        function OperationCancelledError(...args) {
-            Error.apply(this, args);
-            this.name = this.constructor.name;
-            if (Error.captureStackTrace) {
-                Error.captureStackTrace(this, OperationCancelledError);
-            }
-        }
-        OperationCancelledError.prototype = Object.create(Error.prototype);
-        OperationCancelledError.prototype.constructor = OperationCancelledError;
-        return OperationCancelledError;
-})();
-
 // CancellationToken declaration.
 var CancellationToken =
-    CancellationToken || function (ctid) {
-        if (ctid != undefined) {
-            this.__ctid__ = ctid;
-        } else {
-            this.__ctid__ = "cancellationToken_$" + (window.__dupeNukem_Messenger__.id__++);
-        }
-        this.__isCanceled__ = false;
-
-        this.cancel = () => {
-            if (!this.__isCanceled__) {
-                this.__isCanceled__ = true;
-                window.__dupeNukem_Messenger__.sendToHostMessage__(
-                    JSON.stringify({ id: "cancel", type: "metadata", body: this.__ctid__, }));
-            }
-        };
-        this.register = action => {
-            if (this.__isCanceled__) {
-                action();
-            } else {
-                this.__action__ = action;
-            }
-        };
-        this.isCancellationRequested = () => {
-            return this.__isCanceled__;
-        };
-        this.throwIfCancellationRequested = () => {
-            if (this.__isCanceled__) {
-                throw new OperationCancelledError();
-            }
-        };
+    CancellationToken || function () {
+        this.__scope__ = "cancellationToken_" + (window.__dupeNukem_Messenger__.id__++);
+        this.cancel = () => invokeHostMethod(this.__scope__ + ".cancel");
     };
 
 //////////////////////////////////////////////////

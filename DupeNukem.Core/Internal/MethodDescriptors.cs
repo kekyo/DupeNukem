@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////
+﻿////////////////////////////////////////////////////////////////////////////
 //
 // DupeNukem - WebView attachable full-duplex asynchronous interoperable
 // independent messaging library between .NET and JavaScript.
@@ -10,432 +10,457 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json.Linq;
 
-namespace DupeNukem.Internal;
-
-[EditorBrowsable(EditorBrowsableState.Advanced)]
-public sealed class MethodMetadata
+namespace DupeNukem.Internal
 {
-    public readonly bool IsProxyInjecting;
-    public readonly ObsoleteAttribute? Obsolete;
-
-    internal MethodMetadata(bool isProxyInjecting, ObsoleteAttribute? obsolete)
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public sealed class MethodMetadata
     {
-        this.IsProxyInjecting = isProxyInjecting;
-        this.Obsolete = obsolete;
-    }
-}
+        public readonly bool IsProxyInjecting;
+        public readonly ObsoleteAttribute? Obsolete;
 
-[EditorBrowsable(EditorBrowsableState.Advanced)]
-public abstract class MethodDescriptor
-{
-    private readonly IMessenger messenger;
-
-    private protected MethodDescriptor(IMessenger messenger, MethodMetadata metadata)
-    {
-        this.messenger = messenger;
-        this.Metadata = metadata;
-    }
-
-    public MethodMetadata Metadata { get; }
-
-    public abstract Task<object?> InvokeAsync(JToken?[] args);
-
-    protected T ToObject<T>(JToken? arg)
-    {
-        switch (arg)
+        internal MethodMetadata(bool isProxyInjecting, ObsoleteAttribute? obsolete)
         {
-            // Null.
-            case null:
-                return default!;
-            case JObject jo when
-                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                    m.Type == MessageTypes.Metadata &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name:
-                // Function closure comes from JavaScript.
-                if (m.Id == "closure" &&
-                    typeof(Delegate).IsAssignableFrom(typeof(T)) &&
-                    name.StartsWith("__peerClosures__.closure_$"))
-                {
-                    return (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!;
-                }
-                // CancellationToken
-                else if (m.Id == "cancellationToken" &&
-                    typeof(CancellationToken).Equals(typeof(T)) &&
-                    name.StartsWith("cancellationToken_$"))
-                {
-                    return (T)(object)this.messenger.RegisterCancellationToken(name)!;
-                }
-                else
-                {
-                    return arg.ToObject<T>(this.messenger.Serializer)!;
-                }
-            // Other value types.
-            default:
-                return arg.ToObject<T>(this.messenger.Serializer)!;
-        };
+            this.IsProxyInjecting = isProxyInjecting;
+            this.Obsolete = obsolete;
+        }
     }
 
-    protected object? ToObject(JToken? arg, Type type)
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public abstract class MethodDescriptor
     {
-        switch (arg)
+        private readonly IMessenger messenger;
+
+        private protected MethodDescriptor(IMessenger messenger, MethodMetadata metadata)
         {
-            // Null.
-            case null:
-                return default!;
-            case JObject jo when
-                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                    m.Type == MessageTypes.Metadata &&
-                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name:
+            this.messenger = messenger;
+            this.Metadata = metadata;
+        }
+
+        public MethodMetadata Metadata { get; }
+
+        public abstract Task<object?> InvokeAsync(JToken?[] args);
+
+        protected T ToObject<T>(JToken? arg) =>
+            arg switch
+            {
+                // Null.
+                null => default!,
                 // Function closure comes from JavaScript.
-                if (m.Id == "closure" &&
-                    typeof(Delegate).IsAssignableFrom(type) &&
-                    name.StartsWith("__peerClosures__.closure_$"))
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(typeof(T)) =>
+                        (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
+                // Other value types.
+                _ => arg.ToObject<T>(this.messenger.Serializer)!,
+            };
+
+        protected object? ToObject(JToken? arg, Type type) =>
+            arg switch
+            {
+                // Null.
+                null => default!,
+                // Function closure comes from JavaScript.
+                JObject jo when
+                    jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
+                    m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
+                    m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
+                    name.StartsWith("__peerClosures__.closure_$") &&
+                    typeof(Delegate).IsAssignableFrom(type) =>
+                        this.messenger.RegisterPeerClosure(name, type),
+                // Other value types.
+                _ => arg.ToObject(type, this.messenger.Serializer)!,
+            };
+
+        protected void BeginCapturingArguments() =>
+            DeserializingRegisteredObjectRegistry.Begin();
+
+        protected IDisposable FinishCapturingArguments()
+        {
+            // Enumerate the custom instances that have occurred since the call to BeginCapturingArguments(),
+            // register them as temporary instances, and make them available for reference from the other side.
+            // And the registration is released when call to Disposer.Dispose().
+            var objects = DeserializingRegisteredObjectRegistry.Finish();
+            foreach (var entry in objects)
+            {
+                this.messenger.RegisterObject(entry.Key, entry.Value, false);
+            }
+            return new Disposer(this.messenger, objects);
+        }
+
+        private sealed class Disposer : IDisposable
+        {
+            private readonly IMessenger messenger;
+            private readonly KeyValuePair<string, object>[] objects;
+
+            public Disposer(IMessenger messenger, KeyValuePair<string, object>[] objects)
+            {
+                this.messenger = messenger;
+                this.objects = objects;
+            }
+
+            public void Dispose()
+            {
+                foreach (var entry in this.objects)
                 {
-                    return this.messenger.RegisterPeerClosure(name, type);
+                    this.messenger.UnregisterObject(entry.Key, entry.Value);
                 }
-                // CancellationToken
-                else if (m.Id == "cancellationToken" &&
-                    typeof(CancellationToken).Equals(type) &&
-                    name.StartsWith("cancellationToken_$"))
-                {
-                    return this.messenger.RegisterCancellationToken(name);
-                }
-                else
-                {
-                    return arg.ToObject(type, this.messenger.Serializer)!;
-                }
-            // Other value types.
-            default:
-                return arg.ToObject(type, this.messenger.Serializer)!;
-        };
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-internal sealed class ActionDescriptor : MethodDescriptor
-{
-    private readonly Func<Task> action;
-
-    public ActionDescriptor(
-        Func<Task> action, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.action = action;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        Debug.Assert(args.Length == 0);
-        await this.action().
-            ConfigureAwait(false);
-        return null;
-    }
-}
-
-internal sealed class ActionDescriptor<T0> : MethodDescriptor
-{
-    private readonly Func<T0, Task> action;
-
-    public ActionDescriptor(
-        Func<T0, Task> action, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.action = action;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-
-        await this.action(arg0).
-            ConfigureAwait(false);
-        return null;
-    }
-}
-
-internal sealed class ActionDescriptor<T0, T1> : MethodDescriptor
-{
-    private readonly Func<T0, T1, Task> action;
-
-    public ActionDescriptor(
-        Func<T0, T1, Task> action, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.action = action;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-
-        await this.action(arg0, arg1).
-            ConfigureAwait(false);
-        return null;
-    }
-}
-
-internal sealed class ActionDescriptor<T0, T1, T2> : MethodDescriptor
-{
-    private readonly Func<T0, T1, T2, Task> action;
-
-    public ActionDescriptor(
-        Func<T0, T1, T2, Task> action, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.action = action;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-        var arg2 = base.ToObject<T2>(args[2]);
-
-        await this.action(arg0, arg1, arg2).
-            ConfigureAwait(false);
-        return null;
-    }
-}
-
-internal sealed class ActionDescriptor<T0, T1, T2, T3> : MethodDescriptor
-{
-    private readonly Func<T0, T1, T2, T3, Task> action;
-
-    public ActionDescriptor(
-        Func<T0, T1, T2, T3, Task> action, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.action = action;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-        var arg2 = base.ToObject<T2>(args[2]);
-        var arg3 = base.ToObject<T3>(args[3]);
-
-        await this.action(arg0, arg1, arg2, arg3).
-            ConfigureAwait(false);
-        return null;
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-internal sealed class FuncDescriptor<TR> : MethodDescriptor
-{
-    private readonly Func<Task<TR>> func;
-
-    public FuncDescriptor(
-        Func<Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.func = func;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        Debug.Assert(args.Length == 0);
-        return await this.func().
-            ConfigureAwait(false);
-    }
-}
-
-internal sealed class FuncDescriptor<TR, T0> : MethodDescriptor
-{
-    private readonly Func<T0, Task<TR>> func;
-
-    public FuncDescriptor(
-        Func<T0, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.func = func;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-
-        return await this.func(arg0).
-            ConfigureAwait(false);
-    }
-}
-
-internal sealed class FuncDescriptor<TR, T0, T1> : MethodDescriptor
-{
-    private readonly Func<T0, T1, Task<TR>> func;
-
-    public FuncDescriptor(
-        Func<T0, T1, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.func = func;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-
-        return await this.func(arg0, arg1).
-            ConfigureAwait(false);
-    }
-}
-
-internal sealed class FuncDescriptor<TR, T0, T1, T2> : MethodDescriptor
-{
-    private readonly Func<T0, T1, T2, Task<TR>> func;
-
-    public FuncDescriptor(
-        Func<T0, T1, T2, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.func = func;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-        var arg2 = base.ToObject<T2>(args[2]);
-
-        return await this.func(arg0, arg1, arg2).
-            ConfigureAwait(false);
-    }
-}
-
-internal sealed class FuncDescriptor<TR, T0, T1, T2, T3> : MethodDescriptor
-{
-    private readonly Func<T0, T1, T2, T3, Task<TR>> func;
-
-    public FuncDescriptor(
-        Func<T0, T1, T2, T3, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata) =>
-        this.func = func;
-
-    public override async Task<object?> InvokeAsync(JToken?[] args)
-    {
-        var arg0 = base.ToObject<T0>(args[0]);
-        var arg1 = base.ToObject<T1>(args[1]);
-        var arg2 = base.ToObject<T2>(args[2]);
-        var arg3 = base.ToObject<T3>(args[3]);
-
-        return await this.func(arg0, arg1, arg2, arg3).
-            ConfigureAwait(false);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-internal sealed class ObjectMethodDescriptor : MethodDescriptor
-{
-    private readonly object target;
-    private readonly MethodInfo method;
-    private readonly Type[] parameterTypes;
-
-    public ObjectMethodDescriptor(
-        object target, MethodInfo method, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata)
-    {
-        this.target = target;
-        this.method = method;
-        this.parameterTypes = this.method.
-            GetParameters().
-            Select(p => p.ParameterType).
-            ToArray();
+            }
+        }
     }
 
-    public override async Task<object?> InvokeAsync(JToken?[] args)
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class ActionDescriptor : MethodDescriptor
     {
-        var cas = args.
-            Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
-            ToArray();
+        private readonly Func<Task> action;
 
-        var task = (Task)this.method.Invoke(this.target, cas)!;
-        return await TaskResultGetter.GetResultAsync(task);
-    }
-}
+        public ActionDescriptor(
+            Func<Task> action, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.action = action;
 
-///////////////////////////////////////////////////////////////////////////////
-
-internal sealed class DynamicMethodDescriptor : MethodDescriptor
-{
-    private readonly Delegate method;
-    private readonly Type[] parameterTypes;
-
-    public DynamicMethodDescriptor(
-        Delegate method, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata)
-    {
-        this.method = method;
-        this.parameterTypes =
-            this.method.GetMethodInfo()!.
-            GetParameters().
-            Select(p => p.ParameterType).
-            ToArray();
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            Debug.Assert(args.Length == 0);
+            await this.action().
+                ConfigureAwait(false);
+            return null;
+        }
     }
 
-    public override async Task<object?> InvokeAsync(JToken?[] args)
+    internal sealed class ActionDescriptor<T0> : MethodDescriptor
     {
-        var cas = args.
-            Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
-            ToArray();
+        private readonly Func<T0, Task> action;
 
-        await ((Task)this.method.DynamicInvoke(cas)!).
-            ConfigureAwait(false);
-        return null;
-    }
-}
+        public ActionDescriptor(
+            Func<T0, Task> action, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.action = action;
 
-internal sealed class DynamicMethodDescriptor<TR> : MethodDescriptor
-{
-    private readonly Delegate method;
-    private readonly Type[] parameterTypes;
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            using var _ = base.FinishCapturingArguments();
 
-    public DynamicMethodDescriptor(
-        Delegate method, MethodMetadata metadata, IMessenger messenger) :
-        base(messenger, metadata)
-    {
-        this.method = method;
-        this.parameterTypes =
-            this.method.GetMethodInfo()!.
-            GetParameters().
-            Select(p => p.ParameterType).
-            ToArray();
+            await this.action(arg0).
+                ConfigureAwait(false);
+            return null;
+        }
     }
 
-    public override async Task<object?> InvokeAsync(JToken?[] args)
+    internal sealed class ActionDescriptor<T0, T1> : MethodDescriptor
     {
-        var cas = args.
-            Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
-            ToArray();
+        private readonly Func<T0, T1, Task> action;
 
-        var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
-            ConfigureAwait(false);
-        return result;
-    }
-}
+        public ActionDescriptor(
+            Func<T0, T1, Task> action, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.action = action;
 
-///////////////////////////////////////////////////////////////////////////////
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            using var _ = base.FinishCapturingArguments();
 
-internal sealed class DynamicFunctionDescriptor : MethodDescriptor
-{
-    private readonly Delegate function;
-    private readonly Type[] parameterTypes;
-
-    public DynamicFunctionDescriptor(
-        Delegate function, IMessenger messenger) :
-        base(messenger, new(false, null))
-    {
-        this.function = function;
-        this.parameterTypes =
-            this.function.GetMethodInfo()!.
-            GetParameters().
-            Select(p => p.ParameterType).
-            ToArray();
+            await this.action(arg0, arg1).
+                ConfigureAwait(false);
+            return null;
+        }
     }
 
-    public override async Task<object?> InvokeAsync(JToken?[] args)
+    internal sealed class ActionDescriptor<T0, T1, T2> : MethodDescriptor
     {
-        var cas = args.
-            Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
-            ToArray();
+        private readonly Func<T0, T1, T2, Task> action;
 
-        var task = (Task)this.function.DynamicInvoke(cas)!;
-        return await TaskResultGetter.GetResultAsync(task);
+        public ActionDescriptor(
+            Func<T0, T1, T2, Task> action, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.action = action;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            var arg2 = base.ToObject<T2>(args[2]);
+            using var _ = base.FinishCapturingArguments();
+
+            await this.action(arg0, arg1, arg2).
+                ConfigureAwait(false);
+            return null;
+        }
+    }
+
+    internal sealed class ActionDescriptor<T0, T1, T2, T3> : MethodDescriptor
+    {
+        private readonly Func<T0, T1, T2, T3, Task> action;
+
+        public ActionDescriptor(
+            Func<T0, T1, T2, T3, Task> action, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.action = action;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            var arg2 = base.ToObject<T2>(args[2]);
+            var arg3 = base.ToObject<T3>(args[3]);
+            using var _ = base.FinishCapturingArguments();
+
+            await this.action(arg0, arg1, arg2, arg3).
+                ConfigureAwait(false);
+            return null;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class FuncDescriptor<TR> : MethodDescriptor
+    {
+        private readonly Func<Task<TR>> func;
+
+        public FuncDescriptor(
+            Func<Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.func = func;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            Debug.Assert(args.Length == 0);
+            return await this.func().
+                ConfigureAwait(false);
+        }
+    }
+
+    internal sealed class FuncDescriptor<TR, T0> : MethodDescriptor
+    {
+        private readonly Func<T0, Task<TR>> func;
+
+        public FuncDescriptor(
+            Func<T0, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.func = func;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            using var _ = base.FinishCapturingArguments();
+
+            return await this.func(arg0).
+                ConfigureAwait(false);
+        }
+    }
+
+    internal sealed class FuncDescriptor<TR, T0, T1> : MethodDescriptor
+    {
+        private readonly Func<T0, T1, Task<TR>> func;
+
+        public FuncDescriptor(
+            Func<T0, T1, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.func = func;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            using var _ = base.FinishCapturingArguments();
+
+            return await this.func(arg0, arg1).
+                ConfigureAwait(false);
+        }
+    }
+
+    internal sealed class FuncDescriptor<TR, T0, T1, T2> : MethodDescriptor
+    {
+        private readonly Func<T0, T1, T2, Task<TR>> func;
+
+        public FuncDescriptor(
+            Func<T0, T1, T2, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.func = func;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            var arg2 = base.ToObject<T2>(args[2]);
+            using var _ = base.FinishCapturingArguments();
+
+            return await this.func(arg0, arg1, arg2).
+                ConfigureAwait(false);
+        }
+    }
+
+    internal sealed class FuncDescriptor<TR, T0, T1, T2, T3> : MethodDescriptor
+    {
+        private readonly Func<T0, T1, T2, T3, Task<TR>> func;
+
+        public FuncDescriptor(
+            Func<T0, T1, T2, T3, Task<TR>> func, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata) =>
+            this.func = func;
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var arg0 = base.ToObject<T0>(args[0]);
+            var arg1 = base.ToObject<T1>(args[1]);
+            var arg2 = base.ToObject<T2>(args[2]);
+            var arg3 = base.ToObject<T3>(args[3]);
+            using var _ = base.FinishCapturingArguments();
+
+            return await this.func(arg0, arg1, arg2, arg3).
+                ConfigureAwait(false);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class ObjectMethodDescriptor : MethodDescriptor
+    {
+        private readonly object target;
+        private readonly MethodInfo method;
+        private readonly Type[] parameterTypes;
+
+        public ObjectMethodDescriptor(
+            object target, MethodInfo method, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata)
+        {
+            this.target = target;
+            this.method = method;
+            this.parameterTypes = this.method.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            var task = (Task)this.method.Invoke(this.target, cas)!;
+            return await TaskResultGetter.GetResultAsync(task);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class DynamicMethodDescriptor : MethodDescriptor
+    {
+        private readonly Delegate method;
+        private readonly Type[] parameterTypes;
+
+        public DynamicMethodDescriptor(
+            Delegate method, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata)
+        {
+            this.method = method;
+            this.parameterTypes =
+                this.method.GetMethodInfo()!.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            await ((Task)this.method.DynamicInvoke(cas)!).
+                ConfigureAwait(false);
+            return null;
+        }
+    }
+
+    internal sealed class DynamicMethodDescriptor<TR> : MethodDescriptor
+    {
+        private readonly Delegate method;
+        private readonly Type[] parameterTypes;
+
+        public DynamicMethodDescriptor(
+            Delegate method, MethodMetadata metadata, IMessenger messenger) :
+            base(messenger, metadata)
+        {
+            this.method = method;
+            this.parameterTypes =
+                this.method.GetMethodInfo()!.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
+                ConfigureAwait(false);
+            return result;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    internal sealed class DynamicFunctionDescriptor : MethodDescriptor
+    {
+        private readonly Delegate function;
+        private readonly Type[] parameterTypes;
+
+        public DynamicFunctionDescriptor(
+            Delegate function, IMessenger messenger) :
+            base(messenger, new(false, null))
+        {
+            this.function = function;
+            this.parameterTypes =
+                this.function.GetMethodInfo()!.
+                GetParameters().
+                Select(p => p.ParameterType).
+                ToArray();
+        }
+
+        public override async Task<object?> InvokeAsync(JToken?[] args)
+        {
+            base.BeginCapturingArguments();
+            var cas = args.
+                Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
+                ToArray();
+            using var _ = base.FinishCapturingArguments();
+
+            var task = (Task)this.function.DynamicInvoke(cas)!;
+            return await TaskResultGetter.GetResultAsync(task);
+        }
     }
 }

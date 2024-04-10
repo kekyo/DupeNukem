@@ -14,30 +14,31 @@ using CefSharp.Wpf;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
-namespace DupeNukem;
-
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
-public partial class App : Application
+namespace DupeNukem
 {
-    // https://github.com/cefsharp/CefSharp/issues/1714
-
-    public App()
+    /// <summary>
+    /// Interaction logic for App.xaml
+    /// </summary>
+    public partial class App : Application
     {
+        // https://github.com/cefsharp/CefSharp/issues/1714
+
+        public App()
+        {
 #if NETFRAMEWORK
-        CefRuntime.SubscribeAnyCpuAssemblyResolver();
+            CefRuntime.SubscribeAnyCpuAssemblyResolver();
 #endif
-        //Any CefSharp references have to be in another method with NonInlining
-        // attribute so the assembly rolver has time to do it's thing.
-        InitializeCefSharp();
-    }
+            //Any CefSharp references have to be in another method with NonInlining
+            // attribute so the assembly rolver has time to do it's thing.
+            InitializeCefSharp();
+        }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void InitializeCefSharp()
-    {
-        var settings = new CefSettings();
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void InitializeCefSharp()
+        {
+            var settings = new CefSettings();
 
-        Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
+            Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
+        }
     }
 }

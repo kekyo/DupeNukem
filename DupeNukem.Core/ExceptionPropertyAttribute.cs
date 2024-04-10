@@ -11,17 +11,18 @@
 
 using System;
 
-namespace DupeNukem;
-
-[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-public sealed class ExceptionPropertyAttribute : Attribute
+namespace DupeNukem
 {
-    public readonly string? Name;
-
-    public ExceptionPropertyAttribute()
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    public sealed class ExceptionPropertyAttribute : Attribute
     {
-    }
+        public readonly string? Name;
 
-    public ExceptionPropertyAttribute(string name) =>
-        this.Name = name;
+        public ExceptionPropertyAttribute()
+        {
+        }
+
+        public ExceptionPropertyAttribute(string name) =>
+            this.Name = name;
+    }
 }

@@ -14,80 +14,81 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace DupeNukem.Internal;
-
-// Simulate JavaScript FinalizationRegistry.
-internal sealed class FinalizationRegistry
+namespace DupeNukem.Internal
 {
-    private static readonly TimeSpan period = TimeSpan.FromSeconds(5);
-    private static readonly int checkWhenReached = 1000;
-
-    private readonly Action<string> discarded;
-    private readonly Dictionary<string, WeakReference> objects = new();
-    private readonly Timer timer;
-
-    private bool waitForCollectedThreshold;
-
-    public FinalizationRegistry(Action<string> discarded)
+    // Simulate JavaScript FinalizationRegistry.
+    internal sealed class FinalizationRegistry
     {
-        this.discarded = discarded;
-        this.timer = new(_ =>
+        private static readonly TimeSpan period = TimeSpan.FromSeconds(5);
+        private static readonly int checkWhenReached = 1000;
+
+        private readonly Action<string> discarded;
+        private readonly Dictionary<string, WeakReference> objects = new();
+        private readonly Timer timer;
+
+        private bool waitForCollectedThreshold;
+
+        public FinalizationRegistry(Action<string> discarded)
+        {
+            this.discarded = discarded;
+            this.timer = new(_ =>
+            {
+                lock (this.objects)
+                {
+                    this.Collect();
+                }
+            }, null, Timeout.Infinite, Timeout.Infinite);
+        }
+
+        public void Register(object obj, string id)
         {
             lock (this.objects)
             {
-                this.Collect();
+                this.objects.Add(id, new(obj));
+
+                if (this.objects.Count == 1)
+                {
+                    this.timer.Change(period, period);
+                }
+                else if (!waitForCollectedThreshold &&
+                    this.objects.Count >= checkWhenReached)
+                {
+                    this.waitForCollectedThreshold = true;
+                    this.Collect();
+                }
             }
-        }, null, Timeout.Infinite, Timeout.Infinite);
-    }
+        }
 
-    public void Register(object obj, string id)
-    {
-        lock (this.objects)
+        public void ForceClear()
         {
-            this.objects.Add(id, new(obj));
-
-            if (this.objects.Count == 1)
+            lock (this.objects)
             {
-                this.timer.Change(period, period);
+                this.timer.Change(Timeout.Infinite, Timeout.Infinite);
+                this.objects.Clear();
+                this.waitForCollectedThreshold = false;
             }
-            else if (!waitForCollectedThreshold &&
-                this.objects.Count >= checkWhenReached)
+        }
+
+        private void Collect()
+        {
+            var targetKeys = this.objects.Keys.
+                Where(key => !this.objects[key].IsAlive).
+                ToArray();
+
+            foreach (var key in targetKeys)
             {
-                this.waitForCollectedThreshold = true;
-                this.Collect();
+                this.objects.Remove(key);
+                this.discarded(key);
             }
-        }
-    }
 
-    public void ForceClear()
-    {
-        lock (this.objects)
-        {
-            this.timer.Change(Timeout.Infinite, Timeout.Infinite);
-            this.objects.Clear();
-            this.waitForCollectedThreshold = false;
-        }
-    }
-
-    private void Collect()
-    {
-        var targetKeys = this.objects.Keys.
-            Where(key => !this.objects[key].IsAlive).
-            ToArray();
-
-        foreach (var key in targetKeys)
-        {
-            this.objects.Remove(key);
-            this.discarded(key);
-        }
-
-        if (this.objects.Count == 0)
-        {
-            this.timer.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-        if (this.objects.Count < checkWhenReached)
-        {
-            this.waitForCollectedThreshold = false;
+            if (this.objects.Count == 0)
+            {
+                this.timer.Change(Timeout.Infinite, Timeout.Infinite);
+            }
+            if (this.objects.Count < checkWhenReached)
+            {
+                this.waitForCollectedThreshold = false;
+            }
         }
     }
 }

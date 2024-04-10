@@ -7,6 +7,7 @@
     <RootNamespace>DupeNukem</RootNamespace>
     <UseWPF>true</UseWPF>
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>

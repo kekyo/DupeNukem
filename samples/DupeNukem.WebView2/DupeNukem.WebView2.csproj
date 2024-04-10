@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>DupeNukem</RootNamespace>
     <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>

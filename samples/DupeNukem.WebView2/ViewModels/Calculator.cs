@@ -14,7 +14,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
+#if WINDOWS_FORMS
+namespace DupeNukem.WinForms.WebView2;
+#else
 namespace DupeNukem.ViewModels;
+#endif
 
 internal abstract class CalculatorBase1
 {

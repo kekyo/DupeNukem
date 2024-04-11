@@ -5,6 +5,7 @@
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>$(DefinedConstants);XAMARIN_FORMS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,11 @@
     
   <ItemGroup>
     <ProjectReference Include="..\..\..\DupeNukem\DupeNukem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\DupeNukem.WebView2\ViewModels\Calculator.cs" LinkBase="ViewModels" />
+    <Compile Include="..\..\DupeNukem.WebView2\ViewModels\TestFragments.cs" LinkBase="ViewModels" />
   </ItemGroup>
 
 </Project>

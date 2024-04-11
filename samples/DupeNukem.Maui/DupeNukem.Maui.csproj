@@ -9,6 +9,7 @@
 		<UseMaui>true</UseMaui>
 		<SingleProject>true</SingleProject>
 		<Nullable>enable</Nullable>
+		<DefineConstants>$(DefinedConstants);MAUI</DefineConstants>
 
 		<!-- Display name -->
 		<ApplicationTitle>DupeNukem.Maui</ApplicationTitle>
@@ -49,6 +50,11 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
 		<PackageReference Include="Epoxy.Maui" Version="1.13.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="..\DupeNukem.WebView2\ViewModels\Calculator.cs" LinkBase="ViewModels" />
+		<Compile Include="..\DupeNukem.WebView2\ViewModels\TestFragments.cs" LinkBase="ViewModels" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>DupeNukem</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
+    <DefineConstants>$(DefinedConstants);WINDOWS_FORMS</DefineConstants>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
@@ -17,6 +18,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\Calculator.cs" />
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\TestFragments.cs" />
   </ItemGroup>
 
 </Project>

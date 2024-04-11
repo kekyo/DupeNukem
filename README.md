@@ -270,9 +270,9 @@ The return value must be `Task` or `Promise` type.
 It is possible to return the value of the result of asynchronous processing.
 That is, `Task<T>` and `Promise<T>` are allowed.
 
-Callback delegates and functions that take `CancellationToken` type as
-an argument can also contain `CancellationToken`.
-In that case, use that `CancellationToken` for asynchronous processing cancellation of DupeNukem.
+Callback delegates and functions that take `AbortSignal` type as
+an argument can also contain `AbortSignal`.
+In that case, use that `AbortController` and `AbortSignal` for asynchronous processing cancellation of DupeNukem.
 
 Callback delegates and functions are automatically collected by the both garbage collectors
 when they are no longer referenced by anyone.
@@ -376,23 +376,27 @@ On the JavaScript side, you can access `Error.props` as above to get the relevan
 
 .NET has the `CancellationToken` type as the standard infrastructure for
 asynchronous processing.
-However, JavaScript does not have such a thing.
-DupeNukem defines a `CancellationToken` type on the JavaScript side
-that can be used as follows:
+
+JavaScript has an `AbortSignal` that can be used to notify cancellation.
+DupeNukem automatically converts `AbortSignal` to `CancellationToken`.
+
+* `AbortSignal` is an ECMAScript standard type.
+  See [AbortSignal - MDN](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) for details.
 
 ```javascript
-// Prepare a CancellationToken
-const ct = new CancellationToken();
+// Prepare a AbortController
+const ac = new AbortController();
 
 // Setup canceler:
 document.getElementById("cancelButton").onclick =
-    () => ct.cancel();
+    // Calls abort() function to signal cancelling.
+    () => ac.abort();
 
 try {
     // Invoke .NET method asynchronously:
     const resut = await
         dupeNukem.viewModels.mainWindowViewModel.
-        longAwaitedMethod(1, 2, ct);
+        longAwaitedMethod(1, 2, ac.signal);   // <-- Send AbortSignal object.
 }
 catch (e) {
     // An exception is thrown when a cancellation occurs.
@@ -404,7 +408,7 @@ catch (e) {
 ```csharp
 [CallableTarget]
 public async Task<int> LongAwaitedMethodAsync(
-    int a, int b, CancellationToken ct)
+    int a, int b, CancellationToken ct)   // <-- Automatic conversion from AbortSignal.
 {
     // Pass a CancellationToken to a time-consuming asynchronous process:
     await Task.Delay(1000, ct);
@@ -414,9 +418,10 @@ public async Task<int> LongAwaitedMethodAsync(
 
 NOTE:
 
-* `CancellationToken` argument(s) can be defined anywhere in the argument set.
+* `AbortSignal` argument(s) can be defined anywhere in the argument set.
+  * Includes inside nested object fields.
 * The above example is a call in the JavaScript --> .NET direction.
-  .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.10.0.
+  .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.26.0.
 
 ----
 

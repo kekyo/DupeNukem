@@ -7,20 +7,22 @@
     <RootNamespace>DupeNukem</RootNamespace>
     <UseWPF>true</UseWPF>
     <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="Epoxy.Wpf" Version="1.12.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CefSharp.Wpf" Version="121.3.70" />
+    <PackageReference Include="Epoxy.Wpf" Version="1.13.0" />
+    <PackageReference Include="CefSharp.Wpf" Version="121.3.130" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
-    <ProjectReference Include="..\DupeNukem.Sample.Common\DupeNukem.Sample.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\Calculator.cs" LinkBase="ViewModels" />
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\TestFragments.cs" LinkBase="ViewModels" />
   </ItemGroup>
 
 </Project>

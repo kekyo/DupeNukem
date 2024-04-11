@@ -9,27 +9,19 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// This code is a ViewModel, and the initialization code contains a sample implementation of the glue code
-// that ties together DupeNukem's Messenger and WebView.
-// All sample codes use a common test implementation/test script,
-// which are implemented in the `TestModel` class of the `DupeNukem.Sample.Common` project.
-// By comparing the implementation of each platform,
-// we have made it easier to understand the elements required for glue code.
-
-// Epoxy is used to simplify the ViewModel implementation.
-
-using DupeNukem.Models;
 using Epoxy;
 using System;
+using System.Diagnostics;
+using System.Text;
+using System.Threading.Tasks;
 using Xam.Plugin.WebView.Abstractions;
 using Xamarin.Forms;
-
 using Command = Epoxy.Command;
 
 namespace DupeNukem.ViewModels
 {
     [ViewModel]   // PropChanged injection by Epoxy
-    internal sealed class ContentPageViewModel
+    internal sealed partial class ContentPageViewModel
     {
         public Command Ready { get; }
 
@@ -42,11 +34,7 @@ namespace DupeNukem.ViewModels
         {
             // Step 1: Construct DupeNukem Messenger.
             var messenger = new WebViewMessenger();
-
-            // FOR TEST: Initialize tester model.
-            var test = new TestModel();
-            test.RegisterTestObjects(messenger);
-
+            HookWithMessengerTestCode(messenger);   // FOR TEST
             // ----
 
             // ContentPage.Appearing:
@@ -63,19 +51,18 @@ namespace DupeNukem.ViewModels
                         // Marshal to main thread.
                         if (await UIThread.TryBind())
                         {
-                            Application.Current.Dispatcher.BeginInvokeOnMainThread(() =>
-                                formsWebView.InjectJavascriptAsync(e.ToJavaScript()));
+                            await formsWebView.InjectJavascriptAsync(e.ToJavaScript());
                         }
                     };
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     formsWebView.AddLocalCallback(
-                        messenger.PostMessageSymbolName,
+                        WebViewMessenger.PostMessageSymbolName,
                         messenger.ReceivedRequest);
 
                     // Step 4: Injected Messenger script.
                     var script = messenger.GetInjectionScript(true);
-                    TestModel.AddTestJavaScriptCode(script);   // FOR TEST
+                    AddJavaScriptTestCode(script);   // FOR TEST
                     formsWebView.OnNavigationCompleted += (s, url) =>
                     {
                         if (url == formsWebView.Source)
@@ -83,6 +70,9 @@ namespace DupeNukem.ViewModels
                             formsWebView.InjectJavascriptAsync(script.ToString());
                         }
                     };
+
+                    // Register test objects.
+                    this.RegisterTestObjects(messenger);
 
                     return default;
                 });

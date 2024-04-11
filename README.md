@@ -73,6 +73,7 @@ Here is an example using:
 * [`Microsoft.Web.WebView2`](https://www.nuget.org/packages/Microsoft.Web.WebView2) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.WebView2/ViewModels/MainWindowViewModel.cs))
 * [`CefSharp.Wpf`](https://www.nuget.org/packages/CefSharp.Wpf) on WPF. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.CefSharp/ViewModels/MainWindowViewModel.cs))
 * [`Xamarin.Forms`(`Xam.Plugin.WebView`)](https://www.nuget.org/packages/Xam.Plugin.WebView). ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Xamarin.Forms/ViewModels/ContentPageViewModel.cs))
+* `.NET MAUI`. ([Fully sample code is here](https://github.com/kekyo/DupeNukem/blob/main/samples/DupeNukem.Maui/))
 
 ----
 
@@ -394,9 +395,7 @@ try {
         longAwaitedMethod(1, 2, ct);
 }
 catch (e) {
-    if (e instanceof OperationCancelledError) {
-      // An exception is thrown when a cancellation occurs.
-    }
+    // An exception is thrown when a cancellation occurs.
 }
 ```
 
@@ -413,41 +412,11 @@ public async Task<int> LongAwaitedMethodAsync(
 }
 ```
 
-NOTE: `CancellationToken` argument(s) can be defined anywhere in the argument set.
+NOTE:
 
-We can send cancellation signal in backward direction:
-
-```csharp
-// Prepare a CancellationTokenSource
-var cts = new CancellationTokenSource();
-
-// Setup canceler (In use Epoxy):
-this.ClickAbort = Command.Factory.Create(async () =>
-{
-    cts.Cancel();
-    return default;
-});
-
-try
-{
-    // Invoke JavaScript function asynchronously:
-    var resut = await js.longAwaitedFunction(1, 2, cts.Token);
-}
-catch (OperationCanceledException ex)
-{
-    // An exception is thrown when a cancellation occurs.
-}
-```
-
-JavaScript implementation:
-
-```javascript
-async function longAwaitedFunction(a, b, ct) {
-    // Pass a CancellationToken to a time-consuming asynchronous process:
-    await delay(1000, ct);
-    return a + b;
-}
-```
+* `CancellationToken` argument(s) can be defined anywhere in the argument set.
+* The above example is a call in the JavaScript --> .NET direction.
+  .NET --> JavaScript direction calls are not yet allowed to use `CancellationToken` in 0.10.0.
 
 ----
 
@@ -585,13 +554,58 @@ messenger.SendRequest += (s, e) =>
 
 // Step 3: Attached JavaScript --> .NET message handler.
 formsWebView.AddLocalCallback(
-    messenger.PostMessageSymbolName,
+    WebViewMessenger.PostMessageSymbolName,
     messenger.ReceivedRequest);
 
 // Step 4: Injected Messenger script.
 var script = messenger.GetInjectionScript();
 formsWebView.OnNavigationCompleted += (s, url) =>
     formsWebView.InjectJavascriptAsync(script.ToString());
+```
+
+### .NET MAUI
+
+.NET MAUI has a standard `WebView` control.
+However, this control lacks for sending messages from JavaScript to .NET.
+
+Therefore, you will need to implement these glue codes for each platform yourself.
+Examples for Windows and Android are placed in the sample code for your reference.
+
+* [.NET MAUI sample project](samples/DupeNukem.Maui/)
+
+The following is a rough outline of the work required to achieve this:
+
+1. implement a `JavaScriptMultiplexedWebView` control derived from `WebView` that can receive messages from JavaScript.
+2. implement a platform specific handler `JavaScriptMultiplexedWebViewHandler` for the above control.
+3. Register the above handler at application startup.
+
+Once these are in place, you can set up DupeNukem as follows:
+
+```csharp
+// Step 2: Hook up .NET --> JavaScript message handler.
+messenger.SendRequest += async (s, e) =>
+{
+    // Marshal to main thread.
+    if (await UIThread.TryBind())
+    {
+        await webView.InvokeJavaScriptAsync(e.ToJavaScript());
+    }
+};
+
+// Step 3: Attached JavaScript --> .NET message handler.
+webView.MessageReceived += (s, e) => messenger.ReceivedRequest(e.Message);
+
+// Step 4: Injected Messenger script.
+var script = messenger.GetInjectionScript(true);
+webView.Navigated += (s, e) =>
+{
+    if (e.Source is UrlWebViewSource eu &&
+        webView.Source is UrlWebViewSource wu &&
+        eu.Url == wu.Url)
+    {
+        webView.InvokeJavaScriptAsync(script.ToString());
+    }
+};
 ```
 
 ### Celenium WebDriver on .NET
@@ -636,6 +650,12 @@ Apache-v2.
 
 ## History
 
+* 0.26.0:
+  * Added MAUI sample project.
+  * Switched cancellation object to `AbortSignal` ECMAScript standard object instead of `CancellationToken`.
+    * You can continue to use `CancellationToken` now, but marked obsoleted and will be removed in future release.
+  * Rolled back full-duplex cancellation infrastructure (in 0.23.0), because it is buggy.
+  * Replaced implementation on 0.22 branch based.
 * 0.25.0, 0.22.10:
   * Fixed race condition when DupeNukem GC trimmer has arrived.
 * 0.24.0:

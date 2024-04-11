@@ -9,16 +9,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// This initialization code contains a sample implementation of the glue code
-// that ties together DupeNukem's Messenger and WebView.
-// All sample codes use a common test implementation/test script,
-// which are implemented in the `TestModel` class of the `DupeNukem.Sample.Common` project.
-// By comparing the implementation of each platform,
-// we have made it easier to understand the elements required for glue code.
-
-using DupeNukem.Models;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace DupeNukem.WinForms.WebView2;
@@ -31,9 +26,7 @@ public partial class MainForm : Form
     {
         this.InitializeComponent();
 
-        // FOR TEST: Initialize tester model.
-        var test = new TestModel();
-        test.RegisterTestObjects(this.messenger);
+        HookWithMessengerTestCode(this.messenger);   // FOR TEST
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -74,12 +67,15 @@ public partial class MainForm : Form
 
         // Step 4: Injected Messenger script.
         var script = this.messenger.GetInjectionScript(true);
-        TestModel.AddTestJavaScriptCode(script);   // FOR TEST
+        AddJavaScriptTestCode(script);   // FOR TEST
         await this.webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
             script.ToString());
 
         // Enable dev tools.
         this.webView2.CoreWebView2.OpenDevToolsWindow();
+
+        // Register test objects.
+        this.RegisterTestObjects(messenger);
 
         this.webView2.Source = new Uri("https://www.google.com/");
     }

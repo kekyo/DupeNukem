@@ -9,24 +9,20 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// This code is a ViewModel, and the initialization code contains a sample implementation of the glue code
-// that ties together DupeNukem's Messenger and WebView.
-// All sample codes use a common test implementation/test script,
-// which are implemented in the `TestModel` class of the `DupeNukem.Sample.Common` project.
-// By comparing the implementation of each platform,
-// we have made it easier to understand the elements required for glue code.
-
-// Epoxy is used to simplify the ViewModel implementation.
-
-using DupeNukem.Models;
 using Epoxy;
 using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace DupeNukem.ViewModels;
 
 [ViewModel]   // PropChanged injection by Epoxy
-internal sealed class MainWindowViewModel
+internal sealed partial class MainWindowViewModel
 {
     public Command Loaded { get; }
 
@@ -39,11 +35,7 @@ internal sealed class MainWindowViewModel
     {
         // Step 1: Construct DupeNukem Messenger.
         var messenger = new WebViewMessenger();
-
-        // FOR TEST: Initialize tester model.
-        var test = new TestModel();
-        test.RegisterTestObjects(messenger);
-
+        HookWithMessengerTestCode(messenger);   // FOR TEST
         // ----
 
         // MainWindow.Loaded:
@@ -81,12 +73,15 @@ internal sealed class MainWindowViewModel
 
                 // Step 4: Injected Messenger script.
                 var script = messenger.GetInjectionScript(true);
-                TestModel.AddTestJavaScriptCode(script);   // FOR TEST
+                AddJavaScriptTestCode(script);   // FOR TEST
                 await webView2.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                     script.ToString());
 
                 // Enable dev tools.
                 webView2.CoreWebView2.OpenDevToolsWindow();
+
+                // Register test objects.
+                this.RegisterTestObjects(messenger);
             });
 
             this.Url = new Uri("https://www.google.com/");

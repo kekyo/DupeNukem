@@ -11,21 +11,22 @@
 
 using System;
 
-namespace DupeNukem;
-
-[AttributeUsage(AttributeTargets.Method)]
-public class CallableTargetAttribute : Attribute
+namespace DupeNukem
 {
-    public readonly string? Name;
+    [AttributeUsage(AttributeTargets.Method)]
+    public class CallableTargetAttribute : Attribute
+    {
+        public readonly string? Name;
 
-    public readonly bool TrimAsync;
+        public readonly bool TrimAsync;
 
-    public CallableTargetAttribute() =>
-        this.TrimAsync = true;
+        public CallableTargetAttribute() =>
+            this.TrimAsync = true;
 
-    public CallableTargetAttribute(bool trimAsync) =>
-        this.TrimAsync = trimAsync;
+        public CallableTargetAttribute(bool trimAsync) =>
+            this.TrimAsync = trimAsync;
 
-    public CallableTargetAttribute(string name) =>
-        this.Name = name;
+        public CallableTargetAttribute(string name) =>
+            this.Name = name;
+    }
 }

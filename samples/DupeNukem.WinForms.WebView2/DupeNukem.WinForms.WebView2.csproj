@@ -6,17 +6,23 @@
     <Nullable>enable</Nullable>
     <RootNamespace>DupeNukem</RootNamespace>
     <UseWindowsForms>true</UseWindowsForms>
+    <DefineConstants>$(DefinedConstants);WINDOWS_FORMS</DefineConstants>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2277.86" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2420.47" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DupeNukem\DupeNukem.csproj" />
-    <ProjectReference Include="..\DupeNukem.Sample.Common\DupeNukem.Sample.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\Calculator.cs" />
+    <Compile Include="..\DupeNukem.WebView2\ViewModels\TestFragments.cs" />
   </ItemGroup>
 
 </Project>

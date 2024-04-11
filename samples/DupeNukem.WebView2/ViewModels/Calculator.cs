@@ -9,16 +9,16 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// This is a test code to verify that the .NET implementation of the `Calculator` class
-// can be called from the JavaScript side.
-// There are various variations of the implementation, each of which is tested by calling it
-// from the JavaScript side. The JavaScript call code is implemented in `TestModel.AddTestJavaScriptCode()`.
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
-namespace DupeNukem.Models;
+#if WINDOWS_FORMS
+namespace DupeNukem.WinForms.WebView2;
+#else
+namespace DupeNukem.ViewModels;
+#endif
 
 internal abstract class CalculatorBase1
 {
@@ -38,6 +38,21 @@ internal abstract class CalculatorBase2 : CalculatorBase1
     {
         await Task.Delay(100);
         return a + b;
+    }
+}
+
+internal sealed class CalculationModel
+{
+    public int a;
+    public int b;
+    public CancellationToken ct;
+
+    [JsonConstructor]
+    public CalculationModel(int a, int b, CancellationToken ct)
+    {
+        this.a = a;
+        this.b = b;
+        this.ct = ct;
     }
 }
 
@@ -100,6 +115,21 @@ internal sealed class Calculator : CalculatorBase2
     {
         await Task.Delay(100);
         throw new WillBeThrowException(a, b);
+    }
+
+    [CallableTarget]
+    public async Task<int> nested_cancellable(CalculationModel model)
+    {
+        try
+        {
+            await Task.Delay(2000, model.ct);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        return model.a + model.b;
     }
 }
 

@@ -9,86 +9,79 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
-// This code is a ViewModel, and the initialization code contains a sample implementation of the glue code
-// that ties together DupeNukem's Messenger and WebView.
-// All sample codes use a common test implementation/test script,
-// which are implemented in the `TestModel` class of the `DupeNukem.Sample.Common` project.
-// By comparing the implementation of each platform,
-// we have made it easier to understand the elements required for glue code.
-
-// Epoxy is used to simplify the ViewModel implementation.
-
 using CefSharp;
 using CefSharp.Wpf;
-using DupeNukem.Models;
 using Epoxy;
 using System;
+using System.Diagnostics;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace DupeNukem.ViewModels;
-
-[ViewModel]   // PropChanged injection by Epoxy
-internal sealed class MainWindowViewModel
+namespace DupeNukem.ViewModels
 {
-    public Command Loaded { get; }
-
-    public string? Url { get; private set; }
-
-    public Pile<ChromiumWebBrowser> CefSharpPile { get; } =
-        Pile.Factory.Create<ChromiumWebBrowser>();
-
-    public MainWindowViewModel()
+    [ViewModel]   // PropChanged injection by Epoxy
+    internal sealed partial class MainWindowViewModel
     {
-        // Step 1: Construct DupeNukem Messenger.
-        var messenger = new WebViewMessenger();
+        public Command Loaded { get; }
 
-        // FOR TEST: Initialize tester model.
-        var test = new TestModel();
-        test.RegisterTestObjects(messenger);
+        public string? Url { get; private set; }
 
-        // ----
+        public Pile<ChromiumWebBrowser> CefSharpPile { get; } =
+            Pile.Factory.Create<ChromiumWebBrowser>();
 
-        // MainWindow.Loaded:
-        this.Loaded = Command.Factory.Create<EventArgs>(async _ =>
+        public MainWindowViewModel()
         {
-            await this.CefSharpPile.RentAsync(cefSharp =>
+            // Step 1: Construct DupeNukem Messenger.
+            var messenger = new WebViewMessenger();
+            HookWithMessengerTestCode(messenger); // FOR TEST
+            // ----
+
+            // MainWindow.Loaded:
+            this.Loaded = Command.Factory.Create<EventArgs>(async _ =>
             {
-                // Startup sequence.
-                // Bound between CefSharp and DupeNukem Messenger.
-
-                // Step 2: Hook up .NET --> JavaScript message handler.
-                messenger.SendRequest += async (s, e) =>
+                await this.CefSharpPile.RentAsync(cefSharp =>
                 {
-                    // Marshal to main thread.
-                    if (await UIThread.TryBind())
+                    // Startup sequence.
+                    // Bound between CefSharp and DupeNukem Messenger.
+
+                    // Step 2: Hook up .NET --> JavaScript message handler.
+                    messenger.SendRequest += async (s, e) =>
                     {
-                        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-                            e.ToJavaScript());
-                    }
-                };
+                        // Marshal to main thread.
+                        if (await UIThread.TryBind())
+                        {
+                            cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+                                e.ToJavaScript());
+                        }
+                    };
 
-                // Step 3: Attached JavaScript --> .NET message handler.
-                cefSharp.JavascriptMessageReceived += (s, e) =>
-                    messenger.ReceivedRequest(e.Message.ToString());
+                    // Step 3: Attached JavaScript --> .NET message handler.
+                    cefSharp.JavascriptMessageReceived += (s, e) =>
+                        messenger.ReceivedRequest(e.Message.ToString());
 
-                // Step 4: Injected Messenger script.
-                var script = messenger.GetInjectionScript(true);
-                TestModel.AddTestJavaScriptCode(script);   // FOR TEST
-                cefSharp.FrameLoadEnd += (s, e) =>
-                {
-                    if (e.Frame.IsMain)
+                    // Step 4: Injected Messenger script.
+                    var script = messenger.GetInjectionScript(true);
+                    AddJavaScriptTestCode(script); // FOR TEST
+                    cefSharp.FrameLoadEnd += (s, e) =>
                     {
-                        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-                            script.ToString());
-                    }
-                };
+                        if (e.Frame.IsMain)
+                        {
+                            cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+                                script.ToString());
+                        }
+                    };
 
-                // Enable dev tools.
-                cefSharp.ShowDevTools();
+                    // Enable dev tools.
+                    cefSharp.ShowDevTools();
 
-                return default;
+                    // Register test objects.
+                    this.RegisterTestObjects(messenger);
+
+                    return default;
+                });
+
+                this.Url = "https://www.google.com/";
             });
-
-            this.Url = "https://www.google.com/";
-        });
+        }
     }
 }

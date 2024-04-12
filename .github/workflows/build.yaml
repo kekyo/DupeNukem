@@ -51,7 +51,7 @@ jobs:
 
     - name: Build NuGet packages
       run: |
-          dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem/DupeNukem.Core.csproj
+          dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem.Core/DupeNukem.Core.csproj
           dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem/DupeNukem.csproj
 
     #-----------------------------------------------------------------------

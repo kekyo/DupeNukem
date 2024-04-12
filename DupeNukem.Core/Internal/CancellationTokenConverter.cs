@@ -15,69 +15,68 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 
-namespace DupeNukem.Internal
+namespace DupeNukem.Internal;
+
+internal sealed class CancellationTokenConverter : JsonConverter
 {
-    internal sealed class CancellationTokenConverter : JsonConverter
+    private static readonly Type type = typeof(CancellationToken);
+
+    public override bool CanConvert(Type objectType) =>
+        objectType.Equals(type);
+
+    public sealed class CancellationTokenProxy
     {
-        private static readonly Type type = typeof(CancellationToken);
+        private readonly CancellationTokenSource cts = new();
 
-        public override bool CanConvert(Type objectType) =>
-            objectType.Equals(type);
+        public CancellationToken Token =>
+            this.cts.Token;
 
-        public sealed class CancellationTokenProxy
+        internal void Cancel() =>
+            this.cts.Cancel();
+
+        [CallableTarget("cancel")]
+        public Task CancelAsync()
         {
-            private readonly CancellationTokenSource cts = new();
-
-            public CancellationToken Token =>
-                this.cts.Token;
-
-            internal void Cancel() =>
-                this.cts.Cancel();
-
-            [CallableTarget("cancel")]
-            public Task CancelAsync()
-            {
-                this.cts.Cancel();
-                return Utilities.CompletedTask;
-            }
+            this.cts.Cancel();
+            return Utilities.CompletedTask;
         }
+    }
 
-        public override object? ReadJson(
-            JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+    public override object? ReadJson(
+        JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
+    {
+        var body = serializer.Deserialize<CancellationTokenBody>(reader);
+        if (!string.IsNullOrEmpty(body.Scope))
         {
-            var body = serializer.Deserialize<CancellationTokenBody>(reader);
-            if (!string.IsNullOrEmpty(body.Scope))
-            {
-                // Once the CancellationToken argument is found, the CancellationTokenProxy is generated and
-                // make this instance visible from the JavaScript side.
-                // (Actually, it will be extracted and registered later from the DeserializingRegisteredObjectRegistry.)
-                // By being called from the JavaScript side, as in "{Id}.cancel".
-                // CancellationTokenSource.Cancel() is called which is held internally.
-                var ctp = new CancellationTokenProxy();
-                DeserializingRegisteredObjectRegistry.TryCapture(body.Scope, ctp);
+            // Once the CancellationToken argument is found, the CancellationTokenProxy is generated and
+            // make this instance visible from the JavaScript side.
+            // (Actually, it will be extracted and registered later from the DeserializingRegisteredObjectRegistry.)
+            // By being called from the JavaScript side, as in "{Id}.cancel".
+            // CancellationTokenSource.Cancel() is called which is held internally.
+            var ctp = new CancellationTokenProxy();
+            DeserializingRegisteredObjectRegistry.TryCapture(body.Scope, ctp);
 
-                // Already aborted:
-                if (body.Aborted)
-                {
-                    // Cancel now.
-                    ctp.Cancel();
-                }
-                
-                return ctp.Token;
-            }
-            else
+            // Already aborted:
+            if (body.Aborted)
             {
-                return default(CancellationToken);
+                // Cancel now.
+                ctp.Cancel();
             }
+            
+            return ctp.Token;
         }
-
-        public override void WriteJson(
-            JsonWriter writer, object? value, JsonSerializer serializer)
+        else
         {
-            var ct = (CancellationToken)value!;
-
-            // TODO:
-            //writer.WriteValue(tag.Name);
+            return default(CancellationToken);
         }
+    }
+
+    public override void WriteJson(
+        JsonWriter writer, object? value, JsonSerializer serializer)
+    {
+        var ct = value is CancellationToken c ? c : default;
+
+        // TODO:
+        //writer.WriteValue(tag.Name);
     }
 }

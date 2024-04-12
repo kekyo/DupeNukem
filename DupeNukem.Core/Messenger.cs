@@ -69,6 +69,9 @@ namespace DupeNukem
 
         ///////////////////////////////////////////////////////////////////////////////
 
+        public static NamingStrategy GetDefaultNamingStrategy() =>
+            new CamelCaseNamingStrategy();
+
         public static JsonSerializer GetDefaultJsonSerializer()
         {
             var serializer = new JsonSerializer
@@ -81,6 +84,7 @@ namespace DupeNukem
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
             };
             serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
+            serializer.Converters.Add(new ByteArrayConverter());
             serializer.Converters.Add(new CancellationTokenConverter());
             return serializer;
         }

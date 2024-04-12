@@ -189,7 +189,14 @@ var __dupeNukem_Messenger__ =
             const baseName = "closure_$" + (this.id__++);
             window.__peerClosures__[baseName] = obj;
             const name = "__peerClosures__." + baseName;
-            return {id: "descriptor", type: "closure", body: name,};
+            return { id: "descriptor", type: "closure", body: name, };
+        } else if (obj instanceof ArrayBuffer) {
+            const arr = new Uint8Array(obj);
+            return Buffer.from(arr).toString("base64");
+        } else if (obj instanceof Uint8Array) {
+            return Buffer.from(obj).toString("base64");
+        } else if (obj instanceof Uint8ClampedArray) {
+            return Buffer.from(obj).toString("base64");
         } else if (obj instanceof Array) {
             return obj.map(this.normalizeObjects__);
         } else if (obj instanceof AbortSignal) {

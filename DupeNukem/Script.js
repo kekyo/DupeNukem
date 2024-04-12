@@ -61,6 +61,89 @@ var __dupeNukem_Messenger__ =
             { id: message.id, type: "failed", body: exceptionBody, }))
     };
 
+    this.new_cto__ = (aborted) => {
+        const scope = "cancellationToken_" + (this.id__++);
+        return {
+            __scope__: scope,
+            __aborted__: aborted,
+        };
+    };
+
+    this.normalizeObjects__ = obj => {
+        if (obj instanceof Function) {
+            const baseName = "closure_$" + (this.id__++);
+            window.__peerClosures__[baseName] = obj;
+            const name = "__peerClosures__." + baseName;
+            return { id: "descriptor", type: "closure", body: name, };
+        } else if (obj instanceof ArrayBuffer) {
+            const arr = new Uint8Array(obj);
+            return Buffer.from(arr).toString("base64");
+        } else if (obj instanceof Uint8Array) {
+            return Buffer.from(obj).toString("base64");
+        } else if (obj instanceof Uint8ClampedArray) {
+            return Buffer.from(obj).toString("base64");
+        } else if (obj instanceof Array) {
+            return obj.map(this.normalizeObjects__);
+        } else if (obj instanceof AbortSignal) {
+            const cto = this.new_cto__(obj.aborted);
+            if (!obj.aborted) {
+                obj.addEventListener(
+                    "abort",
+                    () => window.invokeHostMethod(cto.__scope__ + ".cancel"));
+            }
+            return cto;
+        } else if (obj instanceof Object) {
+            const newobj = {};
+            for (const [k, v] of Object.entries(obj)) {
+                newobj[k] = this.normalizeObjects__(v);
+            }
+            return newobj;
+        } else {
+            return obj;
+        }
+    }
+
+    this.unnormalizeObjects__ = obj => {
+        if (obj === undefined || obj === null) {
+            return obj;
+        } else if (obj.id === "descriptor" && obj.type !== undefined && obj.body !== undefined) {
+            switch (obj.type) {
+                case "closure":
+                    if (obj.body.startsWith("closure_$")) {
+                        const name = obj.body;
+                        const cb = function () {
+                            const args = new Array(arguments.length);
+                            for (let i = 0; i < args.length; i++) {
+                                args[i] = arguments[i];
+                            }
+                            return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
+                        };
+                        this.registry__.register(cb, name);
+                        return cb;
+                    }
+                    break;
+                case "bytearray":
+                    if (obj.body !== null) {
+                        const arr = Uint8Array.from(Buffer.from(obj.body, "base64"));
+                        return arr;
+                    } else {
+                        return null;
+                    }
+            }
+            return obj;
+        } else if (obj instanceof Array) {
+            return obj.map(this.unnormalizeObjects__);
+        } else if (obj instanceof Object) {
+            const newobj = {};
+            for (const [k, v] of Object.entries(obj)) {
+                newobj[k] = this.unnormalizeObjects__(v);
+            }
+            return newobj;
+        } else {
+            return obj;
+        }
+    }
+
     this.arrivedHostMesssage__ = (jsonString) => {
         try {
             const message = JSON.parse(jsonString);
@@ -70,7 +153,7 @@ var __dupeNukem_Messenger__ =
                     const successorDescriptor = this.suspendings__.get(message.id);
                     if (successorDescriptor !== undefined) {
                         this.suspendings__.delete(message.id);
-                        successorDescriptor.resolve(message.body);
+                        successorDescriptor.resolve(this.unnormalizeObjects__(message.body));
                     }
                     else {
                         console.warn("DupeNukem: suprious message received: " + jsonString);
@@ -116,27 +199,9 @@ var __dupeNukem_Messenger__ =
                                 this.sendExceptionToHost__(message, { name: "invalidFunctionName", message: "Function \"" + fn + "\" is not found.", detail: "", });
                             }
                             else {
-                                const args = message.body.args.map(
-                                    arg => {
-                                        if (arg == null) {
-                                            return null;
-                                        } else if (arg.id === "descriptor" && arg.type === "closure" && arg.body?.startsWith("closure_$")) {
-                                            const name = arg.body;
-                                            const cb = function () {
-                                                const args = new Array(arguments.length);
-                                                for (let i = 0; i < args.length; i++) {
-                                                    args[i] = arguments[i];
-                                                }
-                                                return window.__dupeNukem_Messenger__.invokeHostMethod__(name, args);
-                                            };
-                                            this.registry__.register(cb, name);
-                                            return cb;
-                                        } else {
-                                            return arg;
-                                        }
-                                    });
+                                const args = message.body.args.map(this.unnormalizeObjects__);
                                 f.apply(ti, args).
-                                    then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: result, }))).
+                                    then(result => window.__dupeNukem_Messenger_sendToHostMessage__(JSON.stringify({ id: message.id, type: "succeeded", body: this.normalizeObjects__(result), }))).
                                     catch(e => this.sendExceptionToHost__(message, { name: e.name, message: e.message, detail: e.toString(), }));
                             }
                         }
@@ -176,48 +241,6 @@ var __dupeNukem_Messenger__ =
         }
     };
     
-    this.new_cto__ = (aborted) => {
-        const scope = "cancellationToken_" + (this.id__++);
-        return {
-            __scope__: scope,
-            __aborted__: aborted,
-        };
-    };
-
-    this.normalizeObjects__ = obj => {
-        if (obj instanceof Function) {
-            const baseName = "closure_$" + (this.id__++);
-            window.__peerClosures__[baseName] = obj;
-            const name = "__peerClosures__." + baseName;
-            return { id: "descriptor", type: "closure", body: name, };
-        } else if (obj instanceof ArrayBuffer) {
-            const arr = new Uint8Array(obj);
-            return Buffer.from(arr).toString("base64");
-        } else if (obj instanceof Uint8Array) {
-            return Buffer.from(obj).toString("base64");
-        } else if (obj instanceof Uint8ClampedArray) {
-            return Buffer.from(obj).toString("base64");
-        } else if (obj instanceof Array) {
-            return obj.map(this.normalizeObjects__);
-        } else if (obj instanceof AbortSignal) {
-            const cto = this.new_cto__(obj.aborted);
-            if (!obj.aborted) {
-                obj.addEventListener(
-                    "abort",
-                    () => window.invokeHostMethod(cto.__scope__ + ".cancel"));
-            }
-            return cto;
-        } else if (obj instanceof Object) {
-            const newobj = {};
-            for (const [k, v] of Object.entries(obj)) {
-                newobj[k] = this.normalizeObjects__(v);
-            }
-            return newobj;
-        } else {
-            return obj;
-        }
-    }
-
     this.invokeHostMethod__ = (name, args) => {
         const rargs = args.map(this.normalizeObjects__);
         return new Promise((resolve, reject) => {

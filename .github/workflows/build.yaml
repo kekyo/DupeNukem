@@ -50,7 +50,9 @@ jobs:
       run: dotnet build -p:Configuration=Release -p:Platform="Any CPU" -p:RestoreNoCache=True -p:BuildIdentifier=${GITHUB_RUN_NUMBER} DupeNukem/DupeNukem.csproj
 
     - name: Build NuGet packages
-      run: dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem/DupeNukem.csproj
+      run: |
+          dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem/DupeNukem.Core.csproj
+          dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts DupeNukem/DupeNukem.csproj
 
     #-----------------------------------------------------------------------
     # Test

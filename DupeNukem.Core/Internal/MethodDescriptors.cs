@@ -59,28 +59,8 @@ public abstract class MethodDescriptor
                 Activator.CreateInstance(type) :
                 null;
 
-    private protected IDisposable BeginConverterContext()
-    {
-        ConverterContext.Enter(this.messenger);
-        return new Disposer(this.messenger);
-    }
-
-    private sealed class Disposer : IDisposable
-    {
-        private IMessenger? messenger;
-
-        public Disposer(IMessenger messenger) =>
-            this.messenger = messenger;
-
-        public void Dispose()
-        {
-            if (this.messenger is { } messenger)
-            {
-                this.messenger = null;
-                ConverterContext.Exit(messenger);
-            }
-        }
-    }
+    private protected IDisposable BeginConverterContext() =>
+        ConverterContext.Begin(this.messenger);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

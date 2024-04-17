@@ -10,12 +10,14 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 
-namespace DupeNukem.Internal;
+namespace DupeNukem;
 
-internal static class ConverterContext
+[EditorBrowsable(EditorBrowsableState.Advanced)]
+public static class ConverterContext
 {
     // JsonSerializer cannot pass application-specific context information
     // to the Converter during serialization runs.
@@ -68,27 +70,37 @@ internal static class ConverterContext
     private static readonly ThreadLocal<MessengerContext> messengers =
         new(() => new MessengerContext());
 
-    public static Messenger Current
+    internal static Messenger Current
     {
         get
         {
             AssertValidState();
-            return (Messenger)messengers.Value!.Current;
+
+            // If the cast fails, you need real `Messenger` that actually works.
+            // Perhaps you are using mocks in your unit tests.
+            // Messenger is necessary for successful DupeNukem serialization.
+            if (messengers.Value!.Current is not Messenger m)
+            {
+                throw new InvalidOperationException(
+                    "DupeNukem: You need real `Messenger` instance.");
+            }
+            return m;
         }
     }
 
     [Conditional("DEBUG")]
-    public static void AssertValidState() =>
+    internal static void AssertValidState() =>
         Debug.Assert(
             messengers.Value!.Current is Messenger,
             "Invalid state: Not called correctly.");
 
-    public static void Enter(IMessenger messenger) =>
+    internal static void Enter(IMessenger messenger) =>
         messengers.Value!.Enter(messenger);
 
-    public static void Exit(IMessenger messenger) =>
+    internal static void Exit(IMessenger messenger) =>
         messengers.Value!.Exit(messenger);
 
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
     public static void Run(IMessenger messenger, Action action)
     {
         messengers.Value!.Enter(messenger);
@@ -102,6 +114,7 @@ internal static class ConverterContext
         }
     }
 
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
     public static T Run<T>(IMessenger messenger, Func<T> action)
     {
         messengers.Value!.Enter(messenger);
@@ -112,6 +125,30 @@ internal static class ConverterContext
         finally
         {
             messengers.Value!.Exit(messenger);
+        }
+    }
+
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public static IDisposable Begin(IMessenger messenger)
+    {
+        messengers.Value!.Enter(messenger);
+        return new Disposer(messenger);
+    }
+
+    private sealed class Disposer : IDisposable
+    {
+        private IMessenger? messenger;
+
+        public Disposer(IMessenger messenger) =>
+            this.messenger = messenger;
+
+        public void Dispose()
+        {
+            if (this.messenger is { } messenger)
+            {
+                this.messenger = null!;
+                messengers.Value!.Exit(messenger);
+            }
         }
     }
 }

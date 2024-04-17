@@ -29,9 +29,31 @@ namespace DupeNukem.ViewModels;
 partial class ContentPageViewModel
 #else
 namespace DupeNukem.ViewModels;
+
 partial class MainWindowViewModel
 #endif
 {
+    public sealed class CustomType
+    {
+        public int Value1 = 0;
+        public string? Value2 = null;
+        public CustomType? Value3 = null;
+        public JsonToken? Value4 = null;
+
+        public override bool Equals(object? rhs) =>
+            rhs is CustomType r &&
+            this.Value1.Equals(r.Value1) &&
+            (this.Value2 == r.Value2) &&
+            (this.Value3?.Equals(r.Value3) ?? r.Value3 == null) &&
+            (this.Value4?.Equals(r.Value4) ?? r.Value4 == null);
+
+        public override int GetHashCode() =>
+            this.Value1.GetHashCode() ^
+            (this.Value2?.GetHashCode() ?? 0) ^
+            (this.Value3?.GetHashCode() ?? 0) ^
+            (this.Value4?.GetHashCode() ?? 0);
+    }
+
     private void RegisterTestObjects(WebViewMessenger messenger)
     {
         // ================================================
@@ -82,6 +104,9 @@ partial class MainWindowViewModel
         messenger.RegisterFunc<int, int, int, Func<int, int, CancellationToken, Task<int>>>(
             "callback2",
             async (a, b, cb) => { var r = await cb(a, b, default); return r; });
+        messenger.RegisterFunc<CustomType, CustomType>(
+            "customType",
+            async ct => { await Task.Delay(100); return ct; });
     }
 
     /////////////////////////////////////////////////////////
@@ -153,6 +178,53 @@ partial class MainWindowViewModel
                 Trace.WriteLine("PASSED: Unknown function invoking [unknown]");
             }
 
+            var result_custonType1 = await messenger.InvokePeerMethodAsync<CustomType>(
+                "js_customType",
+                new CustomType
+                {
+                    Value1 = 123,
+                    Value2 = "ABC",
+                    Value3 = new CustomType
+                    {
+                        Value1 = 456,
+                        Value2 = "DEF",
+                        Value4 = 111,
+                    },
+                    Value4 = JsonToken.FromObject(new CustomType
+                    {
+                        Value1 = 789,
+                        Value2 = "GHI",
+                        Value4 = JsonToken.FromObject(new CustomType
+                        {
+                            Value1 = 999,
+                            Value2 = "XXX",
+                            Value4 = 222,
+                        }),
+                    }),
+                });
+            Assert(new CustomType
+            {
+                Value1 = 123,
+                Value2 = "ABC",
+                Value3 = new CustomType
+                {
+                    Value1 = 456,
+                    Value2 = "DEF",
+                    Value4 = 111,
+                },
+                Value4 = JsonToken.FromObject(new CustomType
+                {
+                    Value1 = 789,
+                    Value2 = "GHI",
+                    Value4 = JsonToken.FromObject(new CustomType
+                    {
+                        Value1 = 999,
+                        Value2 = "XXX",
+                        Value4 = 222,
+                    }),
+                }),
+            }, result_custonType1, "js_customType");
+
             /////////////////////////////////////////////////////////
             // Test JavaScript --> .NET methods with callback
 
@@ -204,6 +276,7 @@ partial class MainWindowViewModel
         script.AppendLine("async function js_callback3(a, b, cb) { return await cb(a, b, new AbortController().signal); }");
         script.AppendLine("async function js_arrayBuffer1(arr) { console.log('js_arrayBuffer1(' + arr + ')'); return arr; }");
         script.AppendLine("async function js_arrayBuffer2(arr) { console.log('js_arrayBuffer2(' + arr + ')'); return new Uint8Array(arr); }");
+        script.AppendLine("async function js_customType(ct) { console.log('js_customType(' + ct + ')'); return ct; }");
 
         /////////////////////////////////////////////////////////
         // Invoke JavaScript --> .NET methods:
@@ -246,6 +319,9 @@ partial class MainWindowViewModel
 
         script.AppendLine("  const result_callback2 = await invokeHostMethod('callback2', 1, 2, async (a, b, ct) => a + b);");
         script.AppendLine("  assert(3, result_callback2, 'callback2');");
+
+        script.AppendLine("  const result_customType1 = await invokeHostMethod('customType', { value1:123, value2: 'ABC', value3: { value1: 456, value2: 'DEF', value4: 111 }, value4: { value1: 789, value2: 'GHI', value4: { value1: 999, value2: 'XXX', value4: 222 } } });");
+        script.AppendLine("  assert(JSON.stringify({ value1:123, value2: 'ABC', value3: { value1: 456, value2: 'DEF', value3: null, value4: 111 }, value4: { value1: 789, value2: 'GHI', value4: { value1: 999, value2: 'XXX', value4: 222 } } }), JSON.stringify(result_customType1), 'customType1');");
 
         // Unknown method with `invokeHostMethod()`.
         script.AppendLine("  try {");

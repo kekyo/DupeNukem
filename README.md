@@ -655,6 +655,10 @@ Apache-v2.
 
 ## History
 
+* 0.28.0:
+  * Supported `JsonToken` type sets.
+    If you want to handle untyped JSON using the `JToken` type,
+    use it instead and the serialization will be correct.
 * 0.27.0:
   * Supported serialization for JavaScript `ArrayBuffer`, `Uint8Array` and `Uint8ClampedArray` from/to .NET `byte[]`.
   * Refactored object referencing handlers (In `AbortSignal` and function closures.)

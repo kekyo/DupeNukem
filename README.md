@@ -655,6 +655,9 @@ Apache-v2.
 
 ## History
 
+* 0.27.0:
+  * Supported serialization for JavaScript `ArrayBuffer`, `Uint8Array` and `Uint8ClampedArray` from/to .NET `byte[]`.
+  * Refactored object referencing handlers (In `AbortSignal` and function closures.)
 * 0.26.0:
   * Added MAUI sample project.
   * Switched cancellation object to `AbortSignal` ECMAScript standard object instead of `CancellationToken`.

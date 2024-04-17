@@ -17,117 +17,120 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace DupeNukem
+namespace DupeNukem;
+
+public static class SendRequestEventArgsExtension
 {
-    public static class SendRequestEventArgsExtension
+    public static string ToJavaScript(this SendRequestEventArgs e) =>
+        $"if (window.__dupeNukem_Messenger__ != undefined && window.__dupeNukem_Messenger__.arrivedHostMesssage__ != undefined) window.__dupeNukem_Messenger__.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');";
+}
+
+public sealed class WebViewMessenger : Messenger
+{
+    public WebViewMessenger(TimeSpan? timeoutDuration = default) :
+        base(timeoutDuration)
     {
-        public static string ToJavaScript(this SendRequestEventArgs e) =>
-            $"if (window.__dupeNukem_Messenger__ != undefined && window.__dupeNukem_Messenger__.arrivedHostMesssage__ != undefined) window.__dupeNukem_Messenger__.arrivedHostMesssage__('{e.JsonString.Replace("'", "\\'")}');";
     }
 
-    public sealed class WebViewMessenger : Messenger
+    public WebViewMessenger(
+        JsonSerializer serializer,
+        NamingStrategy memberAccessNamingStrategy,
+        TimeSpan? timeoutDuration) :
+        base(serializer, memberAccessNamingStrategy, timeoutDuration)
     {
-        public WebViewMessenger(TimeSpan? timeoutDuration = default) :
-            base(timeoutDuration)
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        this.Ready = null;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    public event EventHandler? Ready;
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    public const string PostMessageSymbolName =
+        "__dupeNukem_Messenger_sendToHostMessage__";
+
+    public const string PostMessageHostObjectName =
+        "__dupeNukem_Messenger_host__";
+    public const string PostMessageHostSymbolName =
+        "__sendToHostMessage__";
+
+    public StringBuilder GetInjectionScript(bool debugLog = false)
+    {
+        using var s = this.GetType().Assembly.
+            GetManifestResourceStream("DupeNukem.Script.js");
+        var tr = new StreamReader(s!, Encoding.UTF8);
+        var sb = new StringBuilder(tr.ReadToEnd());
+        if (debugLog)
         {
+            sb.AppendLine("__dupeNukem_Messenger__.debugLog__ = true;");
         }
+        return sb;
+    }
 
-        public WebViewMessenger(
-            JsonSerializer serializer,
-            NamingStrategy memberAccessNamingStrategy,
-            TimeSpan? timeoutDuration) :
-            base(serializer, memberAccessNamingStrategy, timeoutDuration)
+    private void InjectFunctionProxy(string name, MethodMetadata metadata)
+    {
+        var obsolete = metadata.Obsolete;
+        var injectBody = new InjectBody(
+            name,
+            obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
+            obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
+        this.SendControlMessageToPeer("inject", injectBody);
+    }
+
+    private void DeleteFunctionProxy(string name) =>
+        this.SendControlMessageToPeer("delete", name);
+
+    protected override void OnRegisterMethod(
+        string name, MethodDescriptor method, bool hasSpecifiedName)
+    {
+        if (method.Metadata.IsProxyInjecting)
         {
+            this.InjectFunctionProxy(name, method.Metadata);
         }
+    }
 
-        public override void Dispose()
+    protected override void OnUnregisterMethod(
+        string name, MethodDescriptor method, bool hasSpecifiedName)
+    {
+        if (method.Metadata.IsProxyInjecting)
         {
-            base.Dispose();
-            this.Ready = null;
+            this.DeleteFunctionProxy(name);
         }
+    }
 
-        ///////////////////////////////////////////////////////////////////////////////
-
-        public event EventHandler? Ready;
-
-        ///////////////////////////////////////////////////////////////////////////////
-
-        public const string PostMessageSymbolName =
-            "__dupeNukem_Messenger_sendToHostMessage__";
-
-        public const string PostMessageHostObjectName =
-            "__dupeNukem_Messenger_host__";
-        public const string PostMessageHostSymbolName =
-            "__sendToHostMessage__";
-
-        public StringBuilder GetInjectionScript(bool debugLog = false)
+    protected override async void OnReceivedControlMessage(
+        string controlId, JToken? body)
+    {
+        switch (controlId)
         {
-            using var s = this.GetType().Assembly.
-                GetManifestResourceStream("DupeNukem.Script.js");
-            var tr = new StreamReader(s!, Encoding.UTF8);
-            var sb = new StringBuilder(tr.ReadToEnd());
-            if (debugLog)
-            {
-                sb.AppendLine("__dupeNukem_Messenger__.debugLog__ = true;");
-            }
-            return sb;
-        }
+            case "ready":
+                // Exhausted page content, maybe all suspending tasks are zombies.
+                this.CancelAllSuspending();
 
-        private void InjectFunctionProxy(string name, MethodMetadata metadata)
-        {
-            var obsolete = metadata.Obsolete;
-            var injectBody = new InjectBody(
-                name,
-                obsolete is { } ? (obsolete.IsError ? "error" : "obsolete") : null,
-                obsolete is { } ? ($"{name} is obsoleted: {obsolete.Message ?? "(none)"}") : null);
-            this.SendControlMessageToPeer("inject", injectBody);
-        }
+                await this.SynchContext.Bind();
 
-        private void DeleteFunctionProxy(string name) =>
-            this.SendControlMessageToPeer("delete", name);
-
-        protected override void OnRegisterMethod(
-            string name, MethodDescriptor method, bool hasSpecifiedName)
-        {
-            if (method.Metadata.IsProxyInjecting)
-            {
-                this.InjectFunctionProxy(name, method.Metadata);
-            }
-        }
-
-        protected override void OnUnregisterMethod(
-            string name, MethodDescriptor method, bool hasSpecifiedName)
-        {
-            if (method.Metadata.IsProxyInjecting)
-            {
-                this.DeleteFunctionProxy(name);
-            }
-        }
-
-        protected override async void OnReceivedControlMessage(
-            string controlId, JToken? body)
-        {
-            switch (controlId)
-            {
-                case "ready":
-                    // Exhausted page content, maybe all suspending tasks are zombies.
-                    this.CancelAllSuspending();
-
-                    await this.SynchContext.Bind();
-
-                    // Inject JavaScript proxies.
-                    foreach (var kv in this.GetRegisteredMethodPairs())
+                // Inject JavaScript proxies.
+                foreach (var kv in this.GetRegisteredMethodPairs())
+                {
+                    if (kv.Value.Metadata.IsProxyInjecting)
                     {
-                        if (kv.Value.Metadata.IsProxyInjecting)
-                        {
-                            this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
-                        }
+                        this.InjectFunctionProxy(kv.Key, kv.Value.Metadata);
                     }
+                }
 
-                    // Invoke ready event.
-                    this.Ready?.Invoke(this, EventArgs.Empty);
-                    break;
-            }
+                // Invoke ready event.
+                this.Ready?.Invoke(this, EventArgs.Empty);
+                break;
+
+            default:
+                base.OnReceivedControlMessage(controlId, body);
+                break;
         }
     }
 }

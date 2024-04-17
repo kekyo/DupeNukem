@@ -48,13 +48,20 @@ internal sealed class VoidSuspendingDescriptor : SuspendingDescriptor
 // SuspendingDescriptor with a return value type.
 internal sealed class SuspendingDescriptor<TR> : SuspendingDescriptor
 {
+    private readonly Messenger messenger;
     private readonly TaskCompletionSource<TR> tcs = new();
+
+    public SuspendingDescriptor(Messenger messenger) =>
+        this.messenger = messenger;
 
     public Task<TR> Task =>
         this.tcs.Task;
 
     public override void Resolve(JToken? result) =>
-        this.tcs.TrySetResult(result is { } ? result.ToObject<TR>()! : default!);
+        this.tcs.TrySetResult(result is { } ?
+            ConverterContext.Run(this.messenger, () =>
+                result.ToObject<TR>(this.messenger.Serializer)!) :
+            default!);
     public override void Reject(Exception ex) =>
         this.tcs.TrySetException(ex);
     public override void Cancel() =>
@@ -64,17 +71,24 @@ internal sealed class SuspendingDescriptor<TR> : SuspendingDescriptor
 // SuspendingDescriptor with a return value type at runtime.
 internal sealed class DynamicSuspendingDescriptor : SuspendingDescriptor
 {
+    private readonly Messenger messenger;
     private readonly Type returnType;
     private readonly TaskCompletionSource<object?> tcs = new();
 
-    public DynamicSuspendingDescriptor(Type returnType) =>
+    public DynamicSuspendingDescriptor(Messenger messenger, Type returnType)
+    {
+        this.messenger = messenger;
         this.returnType = returnType;
+    }
 
     public Task<object?> Task =>
         this.tcs.Task;
 
     public override void Resolve(JToken? result) =>
-        this.tcs.TrySetResult(result is { } ? result.ToObject(this.returnType)! : default!);
+        this.tcs.TrySetResult(result is { } ?
+            ConverterContext.Run(this.messenger, () =>
+                result.ToObject(this.returnType, this.messenger.Serializer)!) :
+            default!);
     public override void Reject(Exception ex) =>
         this.tcs.TrySetException(ex);
     public override void Cancel() =>

@@ -87,6 +87,7 @@ public class Messenger : IMessenger, IDisposable
         serializer.Converters.Add(new ByteArrayConverter());
         serializer.Converters.Add(new CancellationTokenConverter());
         serializer.Converters.Add(new ClosureConverter());
+        serializer.Converters.Add(new JsonTokenConverter());
         return serializer;
     }
 
@@ -360,7 +361,7 @@ public class Messenger : IMessenger, IDisposable
     {
         ct.ThrowIfCancellationRequested();
 
-        var descriptor = new SuspendingDescriptor<TR>();
+        var descriptor = new SuspendingDescriptor<TR>(this);
         this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
         return descriptor.Task;
@@ -371,7 +372,7 @@ public class Messenger : IMessenger, IDisposable
     {
         ct.ThrowIfCancellationRequested();
 
-        var descriptor = new DynamicSuspendingDescriptor(returnType);
+        var descriptor = new DynamicSuspendingDescriptor(this, returnType);
         this.SendInvokeMessageToPeer(descriptor, ct, methodName, args);
 
         return descriptor.Task;

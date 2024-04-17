@@ -10,13 +10,11 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-
 using Newtonsoft.Json.Linq;
 
 namespace DupeNukem.Internal;
@@ -49,72 +47,37 @@ public abstract class MethodDescriptor
 
     public abstract Task<object?> InvokeAsync(JToken?[] args);
 
-    protected T ToObject<T>(JToken? arg) =>
-        arg switch
-        {
-            // Null.
-            null => default!,
-            // Function closure comes from JavaScript.
-            JObject jo when
-                jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                name.StartsWith("__peerClosures__.closure_$") &&
-                typeof(Delegate).IsAssignableFrom(typeof(T)) =>
-                    (T)(object)this.messenger.RegisterPeerClosure(name, typeof(T))!,
-            // Other value types.
-            _ => arg.ToObject<T>(this.messenger.Serializer)!,
-        };
+    private protected T ToObject<T>(JToken? arg) =>
+        arg is { } a ?
+            a.ToObject<T>(this.messenger.Serializer)! :
+            default!;
 
-    protected object? ToObject(JToken? arg, Type type) =>
-        arg switch
-        {
-            // Null.
-            null => default!,
-            // Function closure comes from JavaScript.
-            JObject jo when
-                jo.ToObject<Message>(this.messenger.Serializer) is { } m &&
-                m.Id == "descriptor" && m.Type == MessageTypes.Closure &&
-                m.Body?.ToObject<string>(this.messenger.Serializer) is { } name &&
-                name.StartsWith("__peerClosures__.closure_$") &&
-                typeof(Delegate).IsAssignableFrom(type) =>
-                    this.messenger.RegisterPeerClosure(name, type),
-            // Other value types.
-            _ => arg.ToObject(type, this.messenger.Serializer)!,
-        };
+    private protected object? ToObject(JToken? arg, Type type) =>
+        arg is { } a ?
+            a.ToObject(type, this.messenger.Serializer)! :
+            type.IsValueType() ?
+                Activator.CreateInstance(type) :
+                null;
 
-    protected void BeginCapturingArguments() =>
-        DeserializingRegisteredObjectRegistry.Begin();
-
-    protected IDisposable FinishCapturingArguments()
+    private protected IDisposable BeginConverterContext()
     {
-        // Enumerate the custom instances that have occurred since the call to BeginCapturingArguments(),
-        // register them as temporary instances, and make them available for reference from the other side.
-        // And the registration is released when call to Disposer.Dispose().
-        var objects = DeserializingRegisteredObjectRegistry.Finish();
-        foreach (var entry in objects)
-        {
-            this.messenger.RegisterObject(entry.Key, entry.Value, false);
-        }
-        return new Disposer(this.messenger, objects);
+        ConverterContext.Enter(this.messenger);
+        return new Disposer(this.messenger);
     }
 
     private sealed class Disposer : IDisposable
     {
-        private readonly IMessenger messenger;
-        private readonly KeyValuePair<string, object>[] objects;
+        private IMessenger? messenger;
 
-        public Disposer(IMessenger messenger, KeyValuePair<string, object>[] objects)
-        {
+        public Disposer(IMessenger messenger) =>
             this.messenger = messenger;
-            this.objects = objects;
-        }
 
         public void Dispose()
         {
-            foreach (var entry in this.objects)
+            if (this.messenger is { } messenger)
             {
-                this.messenger.UnregisterObject(entry.Key, entry.Value);
+                this.messenger = null;
+                ConverterContext.Exit(messenger);
             }
         }
     }
@@ -151,9 +114,9 @@ internal sealed class ActionDescriptor<T0> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         await this.action(arg0).
             ConfigureAwait(false);
@@ -172,10 +135,10 @@ internal sealed class ActionDescriptor<T0, T1> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         await this.action(arg0, arg1).
             ConfigureAwait(false);
@@ -194,11 +157,11 @@ internal sealed class ActionDescriptor<T0, T1, T2> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
         var arg2 = base.ToObject<T2>(args[2]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         await this.action(arg0, arg1, arg2).
             ConfigureAwait(false);
@@ -217,12 +180,12 @@ internal sealed class ActionDescriptor<T0, T1, T2, T3> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
         var arg2 = base.ToObject<T2>(args[2]);
         var arg3 = base.ToObject<T3>(args[3]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         await this.action(arg0, arg1, arg2, arg3).
             ConfigureAwait(false);
@@ -260,9 +223,9 @@ internal sealed class FuncDescriptor<TR, T0> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         return await this.func(arg0).
             ConfigureAwait(false);
@@ -280,10 +243,10 @@ internal sealed class FuncDescriptor<TR, T0, T1> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         return await this.func(arg0, arg1).
             ConfigureAwait(false);
@@ -301,11 +264,11 @@ internal sealed class FuncDescriptor<TR, T0, T1, T2> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
         var arg2 = base.ToObject<T2>(args[2]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         return await this.func(arg0, arg1, arg2).
             ConfigureAwait(false);
@@ -323,12 +286,12 @@ internal sealed class FuncDescriptor<TR, T0, T1, T2, T3> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var arg0 = base.ToObject<T0>(args[0]);
         var arg1 = base.ToObject<T1>(args[1]);
         var arg2 = base.ToObject<T2>(args[2]);
         var arg3 = base.ToObject<T3>(args[3]);
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         return await this.func(arg0, arg1, arg2, arg3).
             ConfigureAwait(false);
@@ -357,11 +320,11 @@ internal sealed class ObjectMethodDescriptor : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var cas = args.
             Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
             ToArray();
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         var task = (Task)this.method.Invoke(this.target, cas)!;
         return await TaskResultGetter.GetResultAsync(task);
@@ -389,11 +352,11 @@ internal sealed class DynamicMethodDescriptor : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var cas = args.
             Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
             ToArray();
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         await ((Task)this.method.DynamicInvoke(cas)!).
             ConfigureAwait(false);
@@ -420,11 +383,11 @@ internal sealed class DynamicMethodDescriptor<TR> : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var cas = args.
             Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
             ToArray();
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         var result = await ((Task<TR>)this.method.DynamicInvoke(cas)!).
             ConfigureAwait(false);
@@ -453,11 +416,11 @@ internal sealed class DynamicFunctionDescriptor : MethodDescriptor
 
     public override async Task<object?> InvokeAsync(JToken?[] args)
     {
-        base.BeginCapturingArguments();
+        using var cc = base.BeginConverterContext();
         var cas = args.
             Select((arg, index) => base.ToObject(arg, this.parameterTypes[index])).
             ToArray();
-        using var _ = base.FinishCapturingArguments();
+        cc.Dispose();
 
         var task = (Task)this.function.DynamicInvoke(cas)!;
         return await TaskResultGetter.GetResultAsync(task);

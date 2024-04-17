@@ -86,6 +86,7 @@ public class Messenger : IMessenger, IDisposable
         serializer.Converters.Add(new StringEnumConverter(defaultNamingStrategy));
         serializer.Converters.Add(new ByteArrayConverter());
         serializer.Converters.Add(new CancellationTokenConverter());
+        serializer.Converters.Add(new ClosureConverter());
         return serializer;
     }
 
@@ -110,15 +111,19 @@ public class Messenger : IMessenger, IDisposable
         this.timeoutTimer = new(this.ReachTimeout, null, 0, 0);
         this.peerClosureRegistry = new(name =>
         {
-            var request = new Message(
-                "discard",
-                MessageTypes.Closure,
-                JToken.FromObject(name, this.Serializer));
+            var bodyJson = ConverterContext.Run(this, () =>
+            {
+                var request = new Message(
+                    "discard",
+                    MessageTypes.Control,
+                    JToken.FromObject(name, this.Serializer));
 
-            var tw = new StringWriter();
-            this.Serializer.Serialize(tw, request);
+                var tw = new StringWriter();
+                this.Serializer.Serialize(tw, request);
+                return tw.ToString();
+            });
 
-            this.SendMessageToPeer(tw.ToString());
+            this.SendMessageToPeer(bodyJson);
 
             Trace.WriteLine($"DupeNukem: Sent discarded closure delegate: {name}");
         });
@@ -207,6 +212,16 @@ public class Messenger : IMessenger, IDisposable
         return dlg;
     }
 
+    internal string RegisterHostClosure(Delegate closure)
+    {
+        var name = "closure_$" + Interlocked.Increment(ref this.id);
+        this.RegisterMethod(
+            name,
+            new DynamicFunctionDescriptor(closure, this),
+            true);
+        return name;
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
 
     [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -282,31 +297,6 @@ public class Messenger : IMessenger, IDisposable
         }
     }
 
-    private JToken? SerializeArgument(object? arg)
-    {
-        switch (arg)
-        {
-            case null:
-                return null;
-            case Delegate closure:
-                var name = "closure_$" + Interlocked.Increment(ref this.id);
-                this.RegisterMethod(
-                    name,
-                    new DynamicFunctionDescriptor(closure, this),
-                    true);
-                return JToken.FromObject(
-                    new Message(
-                        "descriptor",
-                        MessageTypes.Closure,
-                        JToken.FromObject(name, this.Serializer)),
-                    this.Serializer);
-            default:
-                return JToken.FromObject(
-                    arg,
-                    this.Serializer);
-        }
-    }
-
     private void SendInvokeMessageToPeer(
         SuspendingDescriptor descriptor, CancellationToken ct,
         string functionName, object?[] args)
@@ -336,19 +326,22 @@ public class Messenger : IMessenger, IDisposable
 
         this.suspendings.SafeAdd(id, descriptor);
 
-        var body = new InvokeBody(
-            functionName,
-            args.Select(this.SerializeArgument).
-            ToArray());
-        var request = new Message(
-            id,
-            MessageTypes.Invoke,
-            JToken.FromObject(body, this.Serializer));
+        var bodyJson = ConverterContext.Run(this, () =>
+        {
+            var body = new InvokeBody(
+                functionName,
+                JArray.FromObject(args, this.Serializer).ToArray());
+            var request = new Message(
+                id,
+                MessageTypes.Invoke,
+                JToken.FromObject(body, this.Serializer));
 
-        var tw = new StringWriter();
-        this.Serializer.Serialize(tw, request);
+            var tw = new StringWriter();
+            this.Serializer.Serialize(tw, request);
+            return tw.ToString();
+        });
 
-        this.SendMessageToPeer(tw.ToString());
+        this.SendMessageToPeer(bodyJson);
     }
 
     public Task InvokePeerMethodAsync(
@@ -389,34 +382,61 @@ public class Messenger : IMessenger, IDisposable
     protected void SendControlMessageToPeer(
         string controlId, object? message)
     {
-        var request = new Message(
-            controlId,
-            MessageTypes.Control,
-            message != null ?
-                JToken.FromObject(message, this.Serializer) :
-                null);
-        var tw = new StringWriter();
-        this.Serializer.Serialize(tw, request);
-        this.SendMessageToPeer(tw.ToString());
+        var requestJson = ConverterContext.Run(this, () =>
+        {
+            var request = new Message(
+                controlId,
+                MessageTypes.Control,
+                message != null ?
+                    JToken.FromObject(message, this.Serializer) :
+                    null);
+
+            var tw = new StringWriter();
+            this.Serializer.Serialize(tw, request);
+            return tw.ToString();
+        });
+
+        this.SendMessageToPeer(requestJson);
     }
 
     protected virtual void OnReceivedControlMessage(
         string controlId, JToken? body)
     {
+        switch (controlId)
+        {
+            case "discard":
+                // Decline invalid name to avoid security attacks.
+                var name = ConverterContext.Run(this, () =>
+                    body!.ToObject<string>(this.Serializer));
+                if (name?.StartsWith("closure_$") ?? false)
+                {
+                    this.methods.SafeRemove(name);
+                    Trace.WriteLine($"DupeNukem: Deleted peer closure target delegate: {name}");
+                }
+                break;
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unknown control id: {controlId}");
+        }
     }
 
     private void SendExceptionMessageToPeer(
         Message message, ExceptionBody responseBody)
     {
-        var response = new Message(
-            message.Id,
-            MessageTypes.Failed,
-            JToken.FromObject(responseBody, this.Serializer));
+        var responseJson = ConverterContext.Run(this, () =>
+        {
+            var response = new Message(
+                message.Id,
+                MessageTypes.Failed,
+                JToken.FromObject(responseBody, this.Serializer));
 
-        var tw = new StringWriter();
-        this.Serializer.Serialize(tw, response);
+            var tw = new StringWriter();
+            this.Serializer.Serialize(tw, response);
+            return tw.ToString();
+        });
 
-        this.SendMessageToPeer(tw.ToString());
+        this.SendMessageToPeer(responseJson);
     }
 
     public async void ReceivedRequest(string jsonString)
@@ -448,7 +468,8 @@ public class Messenger : IMessenger, IDisposable
                     if (this.suspendings.SafeTryGetValue(message.Id, out var failureDescriptor))
                     {
                         this.suspendings.SafeRemove(message.Id);
-                        var error = message.Body!.ToObject<ExceptionBody>(this.Serializer);
+                        var error = ConverterContext.Run(this, () =>
+                            message.Body!.ToObject<ExceptionBody>(this.Serializer));
                         try
                         {
                             throw new PeerInvocationException(
@@ -468,8 +489,8 @@ public class Messenger : IMessenger, IDisposable
                 case MessageTypes.Invoke:
                     try
                     {
-                        var body = message.Body!.ToObject<InvokeBody>(this.Serializer);
-
+                        var body = ConverterContext.Run(this, () =>
+                            message.Body!.ToObject<InvokeBody>(this.Serializer));
                         if (this.methods.SafeTryGetValue(body.Name, out var method))
                         {
                             await this.SynchContext.Bind();
@@ -477,16 +498,21 @@ public class Messenger : IMessenger, IDisposable
                             var result = await method.InvokeAsync(body.Args).
                                 ConfigureAwait(false);
 
-                            var response = new Message(
-                                message.Id, MessageTypes.Succeeded,
-                                (result != null) ?
-                                    JToken.FromObject(result, this.Serializer) :
-                                    null);
+                            var responseJson = ConverterContext.Run(this, () =>
+                            {
+                                var response = new Message(
+                                    message.Id,
+                                    MessageTypes.Succeeded,
+                                    (result != null) ?
+                                        JToken.FromObject(result, this.Serializer) :
+                                        null);
 
-                            var tw = new StringWriter();
-                            this.Serializer.Serialize(tw, response);
+                                var tw = new StringWriter();
+                                this.Serializer.Serialize(tw, response);
+                                return tw.ToString();
+                            });
 
-                            this.SendMessageToPeer(tw.ToString());
+                            this.SendMessageToPeer(responseJson);
                         }
                         else
                         {
@@ -501,32 +527,26 @@ public class Messenger : IMessenger, IDisposable
                     }
                     catch (Exception ex)
                     {
-                        var props = Utilities.ExtractExceptionProperties(
-                            ex, this.MemberAccessNamingStrategy);
+                        ConverterContext.Run(this, () =>
+                        {
+                            var props = Utilities.ExtractExceptionProperties(
+                                ex, this.MemberAccessNamingStrategy);
 
-                        var responseBody = new ExceptionBody(
-                            ex.GetType().FullName!, ex.Message,
-                            this.SendExceptionWithStackTrace ?
-                                (ex.StackTrace ?? string.Empty) :
-                                string.Empty,
-                            props);
+                            var responseBody = new ExceptionBody(
+                                ex.GetType().FullName!, ex.Message,
+                                this.SendExceptionWithStackTrace ?
+                                    (ex.StackTrace ?? string.Empty) :
+                                    string.Empty,
+                                props);
 
-                        this.SendExceptionMessageToPeer(message, responseBody);
+                            this.SendExceptionMessageToPeer(message, responseBody);
+                        });
                     }
                     break;
 
-                case MessageTypes.Closure:
-                    switch (message.Id)
-                    {
-                        case "discard" when
-                            // Decline invalid name to avoid security attacks.
-                            message.Body!.ToObject<string>(this.Serializer) is { } name &&
-                            name.StartsWith("closure_$"):
-                                this.methods.SafeRemove(name);
-                                Trace.WriteLine($"DupeNukem: Deleted peer closure target delegate: {name}");
-                                break;
-                    }
-                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unknown message type: {message.Type}");
             }
         }
         catch (Exception ex)

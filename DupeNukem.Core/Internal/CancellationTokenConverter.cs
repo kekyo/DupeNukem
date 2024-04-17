@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace DupeNukem.Internal;
 
@@ -45,16 +46,18 @@ internal sealed class CancellationTokenConverter : JsonConverter
     public override object? ReadJson(
         JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
     {
-        var body = serializer.Deserialize<CancellationTokenBody>(reader);
-        if (!string.IsNullOrEmpty(body.Scope))
+        ConverterContext.AssertValidState();
+
+        var value = serializer.Deserialize<TypedValue>(reader);
+        if (value.Type == TypedValueTypes.AbortSignal &&
+            value.Body.ToObject<CancellationTokenBody>(serializer) is { } body &&
+            !string.IsNullOrEmpty(body.Scope))
         {
             // Once the CancellationToken argument is found, the CancellationTokenProxy is generated and
             // make this instance visible from the JavaScript side.
-            // (Actually, it will be extracted and registered later from the DeserializingRegisteredObjectRegistry.)
             // By being called from the JavaScript side, as in "{Id}.cancel".
-            // CancellationTokenSource.Cancel() is called which is held internally.
             var ctp = new CancellationTokenProxy();
-            DeserializingRegisteredObjectRegistry.TryCapture(body.Scope, ctp);
+            ConverterContext.Current.RegisterObject(body.Scope, ctp);
 
             // Already aborted:
             if (body.Aborted)
@@ -62,7 +65,7 @@ internal sealed class CancellationTokenConverter : JsonConverter
                 // Cancel now.
                 ctp.Cancel();
             }
-            
+
             return ctp.Token;
         }
         else
@@ -74,9 +77,19 @@ internal sealed class CancellationTokenConverter : JsonConverter
     public override void WriteJson(
         JsonWriter writer, object? value, JsonSerializer serializer)
     {
-        var ct = value is CancellationToken c ? c : default;
+        ConverterContext.AssertValidState();
 
-        // TODO:
-        //writer.WriteValue(tag.Name);
+        if (value is CancellationToken c)
+        {
+            var scope = $"abortSignal_{0}";   // TODO:
+            var cancellationTokenBody = new CancellationTokenBody(scope, c.IsCancellationRequested);
+            var body = JToken.FromObject(cancellationTokenBody);
+            var typedValue = new TypedValue(TypedValueTypes.AbortSignal, body);
+            serializer.Serialize(writer, typedValue);
+        }
+        else
+        {
+            writer.WriteNull();
+        }
     }
 }

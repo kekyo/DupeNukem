@@ -87,6 +87,13 @@ public static class Utilities
 
     ///////////////////////////////////////////////////////////////////////////////
 
+    internal static bool IsValueType(this Type type) =>
+#if NETSTANDARD1_3 || NETSTANDARD1_4 || NETSTANDARD1_5 || NETSTANDARD1_6
+        type.GetTypeInfo().IsValueType;
+#else
+        type.IsValueType;
+#endif
+
     internal static string GetName(Type type)
     {
         var tn = type.Name.LastIndexOf('`') is { } index && index >= 0 ?

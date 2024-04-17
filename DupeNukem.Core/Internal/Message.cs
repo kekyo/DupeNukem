@@ -26,7 +26,6 @@ public enum MessageTypes
     Succeeded,
     Failed,
     Invoke,
-    Closure,
 }
 
 [EditorBrowsable(EditorBrowsableState.Advanced)]
@@ -83,6 +82,29 @@ internal readonly struct ExceptionBody
         this.Message = message;
         this.Detail = detail;
         this.Properties = properties;
+    }
+}
+
+internal enum TypedValueTypes
+{
+    Closure,
+    AbortSignal,
+    ByteArray,
+}
+
+internal readonly struct TypedValue
+{
+    [JsonProperty("__type__")]
+    public readonly TypedValueTypes Type;
+
+    [JsonProperty("__body__")]
+    public readonly JToken Body;
+
+    [JsonConstructor]
+    public TypedValue(TypedValueTypes __type__, JToken __body__)
+    {
+        this.Type = __type__;
+        this.Body = __body__;
     }
 }
 

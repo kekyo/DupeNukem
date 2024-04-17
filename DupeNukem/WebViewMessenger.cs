@@ -127,6 +127,10 @@ public sealed class WebViewMessenger : Messenger
                 // Invoke ready event.
                 this.Ready?.Invoke(this, EventArgs.Empty);
                 break;
+
+            default:
+                base.OnReceivedControlMessage(controlId, body);
+                break;
         }
     }
 }

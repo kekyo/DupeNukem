@@ -73,6 +73,9 @@ partial class MainWindowViewModel
         messenger.RegisterFunc<ConsoleKey[], ConsoleKey[]>(
             "array",
             async keys => { await Task.Delay(100); return keys; });
+        messenger.RegisterFunc<byte[], byte[]>(
+            "arrayBuffer",
+            async arr => { await Task.Delay(100); return arr; });
         messenger.RegisterFunc<int, int, int, Func<int, int, Task<int>>>(
             "callback",
             async (a, b, cb) => { var r = await cb(a, b); return r; });
@@ -199,6 +202,8 @@ partial class MainWindowViewModel
         script.AppendLine("async function js_callback(a, b, cb) { return await cb(a, b); }");
         script.AppendLine("async function js_callback2(a, b, cb) { return await cb(a, b, new CancellationToken()); }");
         script.AppendLine("async function js_callback3(a, b, cb) { return await cb(a, b, new AbortController().signal); }");
+        script.AppendLine("async function js_arrayBuffer1(arr) { console.log('js_arrayBuffer1(' + arr + ')'); return arr; }");
+        script.AppendLine("async function js_arrayBuffer2(arr) { console.log('js_arrayBuffer2(' + arr + ')'); return new Uint8Array(arr); }");
 
         /////////////////////////////////////////////////////////
         // Invoke JavaScript --> .NET methods:
@@ -224,6 +229,18 @@ partial class MainWindowViewModel
         script.AppendLine("  const result_array = await invokeHostMethod('array', [42, 13, 27]);");
         script.AppendLine("  assert(['print','enter','escape'], result_array, 'array');");
 
+        script.AppendLine("  const arg_arrayBuffer = new Uint8Array(5);");
+        script.AppendLine("  arg_arrayBuffer[0] = 1;");
+        script.AppendLine("  arg_arrayBuffer[1] = 2;");
+        script.AppendLine("  arg_arrayBuffer[2] = 3;");
+        script.AppendLine("  arg_arrayBuffer[3] = 4;");
+        script.AppendLine("  arg_arrayBuffer[4] = 5;");
+        script.AppendLine("  const result_arrayBuffer1 = await invokeHostMethod('arrayBuffer', arg_arrayBuffer.buffer);");
+        script.AppendLine("  assert('1,2,3,4,5', new Uint8Array(result_arrayBuffer1).toString(), 'arrayBuffer1');");
+
+        script.AppendLine("  const result_arrayBuffer2 = await invokeHostMethod('arrayBuffer', arg_arrayBuffer);");
+        script.AppendLine("  assert('1,2,3,4,5', new Uint8Array(result_arrayBuffer2).toString(), 'arrayBuffer2');");
+
         script.AppendLine("  const result_callback = await invokeHostMethod('callback', 1, 2, async (a, b) => a - b);");
         script.AppendLine("  assert(-1, result_callback, 'callback');");
 
@@ -241,28 +258,28 @@ partial class MainWindowViewModel
 #if WINDOWS_FORMS
         // Fully qualified object/function naming with `invokeHostMethod()`.
         script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('dupeNukem.winForms.webView2.calculator.add', 1, 2);");
-        script.AppendLine("  console.log('fullName_calc.add: ' + result_fullName_calc_add);");
+        script.AppendLine("  assert(3, result_fullName_calc_add, 'fullName_calc.add');");
 
         // Able to call different fully qualified function on an object with `invokeHostMethod()`.
         script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('dupeNukem.winForms.webView2.calculator.sub', 1, 2);");
-        script.AppendLine("  console.log('fullName_calc.sub: ' + result_fullName_calc_sub);");
+        script.AppendLine("  assert(-1, result_fullName_calc_sub, 'fullName_calc.sub');");
 #else
         // Fully qualified object/function naming with `invokeHostMethod()`.
         script.AppendLine("  const result_fullName_calc_add = await invokeHostMethod('dupeNukem.viewModels.calculator.add', 1, 2);");
-        script.AppendLine("  console.log('fullName_calc.add: ' + result_fullName_calc_add);");
+        script.AppendLine("  assert(3, result_fullName_calc_add, 'fullName_calc.add');");
 
         // Able to call different fully qualified function on an object with `invokeHostMethod()`.
         script.AppendLine("  const result_fullName_calc_sub = await invokeHostMethod('dupeNukem.viewModels.calculator.sub', 1, 2);");
-        script.AppendLine("  console.log('fullName_calc.sub: ' + result_fullName_calc_sub);");
+        script.AppendLine("  assert(-1, result_fullName_calc_sub, 'fullName_calc.sub');");
 #endif
 
         // An object/function naming with `invokeHostMethod()`.
         script.AppendLine("  const result_calc_add = await invokeHostMethod('calc.add', 1, 2);");
-        script.AppendLine("  console.log('calc.add: ' + result_calc_add);");
+        script.AppendLine("  assert(3, result_calc_add, 'calc.add');");
 
         // Able to call different function on an object with `invokeHostMethod()`.
         script.AppendLine("  const result_calc_sub = await invokeHostMethod('calc.sub', 1, 2);");
-        script.AppendLine("  console.log('calc.sub: ' + result_calc_sub);");
+        script.AppendLine("  assert(-1, result_calc_sub, 'calc.sub');");
 
         // Unknown method on a object.
         script.AppendLine("  try {");
@@ -275,7 +292,7 @@ partial class MainWindowViewModel
         // CancellationToken (obsoleted)
         script.AppendLine("  const ct1 = new CancellationToken();");
         script.AppendLine("  const result_calc_add_cancellable1 = await invokeHostMethod('calc.add_cancellable', 1, 2, ct1);");
-        script.AppendLine("  console.log('calc.add_cancellable1: ' + result_calc_add_cancellable1);");
+        script.AppendLine("  assert(3, result_calc_add_cancellable1, 'calc.add_cancellable1');");
 
         script.AppendLine("  const ct2 = new CancellationToken();");
         script.AppendLine("  const result_calc_add_cancellable2_p = invokeHostMethod('calc.add_cancellable', 1, 2, ct2);");
@@ -291,7 +308,7 @@ partial class MainWindowViewModel
         // AbortController/AbortSignal
         script.AppendLine("  const ac1 = new AbortController();");
         script.AppendLine("  const result_calc_add_cancellable1_as = await invokeHostMethod('calc.add_cancellable', 1, 2, ac1.signal);");
-        script.AppendLine("  console.log('calc.add_cancellable1_as: ' + result_calc_add_cancellable1_as);");
+        script.AppendLine("  assert(3, result_calc_add_cancellable1_as, 'calc.add_cancellable1_as');");
 
         script.AppendLine("  const ac2 = new AbortController();");
         script.AppendLine("  const result_calc_add_cancellable2_p_as = invokeHostMethod('calc.add_cancellable', 1, 2, ac2.signal);");
@@ -307,7 +324,7 @@ partial class MainWindowViewModel
         // AbortController/AbortSignal (nested)
         script.AppendLine("  const ac3 = new AbortController();");
         script.AppendLine("  const result_calc_nested_cancellable = await invokeHostMethod('calc.nested_cancellable', { a: 1, b: 2, ct: ac3.signal, });");
-        script.AppendLine("  console.log('calc.nested_cancellable: ' + result_calc_nested_cancellable);");
+        script.AppendLine("  assert(3, result_calc_nested_cancellable, 'calc.nested_cancellable');");
 
         script.AppendLine("  const ac4 = new AbortController();");
         script.AppendLine("  const result_calc_nested_cancellable_p = invokeHostMethod('calc.nested_cancellable', { a: 1, b: 2, ct: ac4.signal, });");
@@ -323,22 +340,22 @@ partial class MainWindowViewModel
 #if WINDOWS_FORMS
         // Fully qualified proxy object/function naming.
         script.AppendLine("  const result_fullName_proxy_calc_add = await dupeNukem.winForms.webView2.calculator.add(1, 2);");
-        script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
+        script.AppendLine("  assert(3, result_fullName_proxy_calc_add, 'fullName_proxy_calc.add');");
 #else
         // Fully qualified proxy object/function naming.
         script.AppendLine("  const result_fullName_proxy_calc_add = await dupeNukem.viewModels.calculator.add(1, 2);");
-        script.AppendLine("  console.log('fullName_proxy_calc.add: ' + result_fullName_proxy_calc_add);");
+        script.AppendLine("  assert(3, result_fullName_proxy_calc_add, 'fullName_proxy_calc.add');");
 #endif
         // Proxy object/function.
         script.AppendLine("  const result_proxy_calc_add = await calc.add(1, 2);");
-        script.AppendLine("  console.log('proxy_calc.add: ' + result_proxy_calc_add);");
+        script.AppendLine("  assert(3, result_proxy_calc_add, 'proxy_calc.add');");
 
         // Obsoleted marking.
         script.AppendLine("  const result_calc_add_obsoleted1 = await calc.add_obsoleted1(1, 2);");
-        script.AppendLine("  console.log('calc.add_obsoleted1: ' + result_calc_add_obsoleted1);");
+        script.AppendLine("  assert(3, result_calc_add_obsoleted1, 'calc.add_obsoleted1');");
 
         script.AppendLine("  const result_calc_add_obsoleted2 = await calc.add_obsoleted2(1, 2);");
-        script.AppendLine("  console.log('calc.add_obsoleted2: ' + result_calc_add_obsoleted2);");
+        script.AppendLine("  assert(3, result_calc_add_obsoleted2, 'calc.add_obsoleted2');");
 
         script.AppendLine("  try {");
         script.AppendLine("    await calc.add_obsoleted3(1, 2);");
@@ -348,8 +365,8 @@ partial class MainWindowViewModel
         script.AppendLine("  }");
 
         // Able to call different functions on a proxy object.
-        script.AppendLine("  const result_calc_mul = await calc.mul(2, 3);");
-        script.AppendLine("  console.log('calc.mul: ' + result_calc_mul);");
+        script.AppendLine("  const result_proxy_calc_mul = await calc.mul(2, 3);");
+        script.AppendLine("  assert(6, result_proxy_calc_mul, 'proxy_calc.mul');");
 
         // Interoperated exceptions.
         script.AppendLine("  try {");

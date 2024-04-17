@@ -5,7 +5,8 @@
     x:Class="DupeNukem.Maui.Views.MainPage"
     xmlns:epoxy="https://github.com/kekyo/Epoxy"
     xmlns:controls="clr-namespace:DupeNukem.Maui.Controls"
-    xmlns:viewmodels="clr-namespace:DupeNukem.ViewModels">
+    xmlns:viewmodels="clr-namespace:DupeNukem.ViewModels"
+    x:DataType="viewmodels:ContentPageViewModel">
 
     <ContentPage.BindingContext>
         <viewmodels:ContentPageViewModel />

@@ -10,16 +10,15 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace DupeNukem.Internal;
 
-internal sealed class ByteArrayConverter : JsonConverter
+internal sealed class ClosureConverter : JsonConverter
 {
-    private static readonly Type type = typeof(byte[]);
-
     public override bool CanConvert(Type objectType) =>
-        objectType.Equals(type);
+        typeof(Delegate).IsAssignableFrom(objectType);
 
     public override object? ReadJson(
         JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
@@ -27,10 +26,13 @@ internal sealed class ByteArrayConverter : JsonConverter
         ConverterContext.AssertValidState();
 
         var typedValue = serializer.Deserialize<TypedValue>(reader);
-        if (typedValue.Type == TypedValueTypes.ByteArray)
+        if (typedValue.Type == TypedValueTypes.Closure)
         {
-            var base64 = typedValue.Body.ToObject<string>(serializer)!;
-            return Convert.FromBase64String(base64);
+            var name = typedValue.Body.ToObject<string>(serializer)!;
+            if (name.StartsWith("__peerClosures__.closure_$"))
+            {
+                return ConverterContext.Current.RegisterPeerClosure(name, objectType);
+            }
         }
         return null;
     }
@@ -40,10 +42,10 @@ internal sealed class ByteArrayConverter : JsonConverter
     {
         ConverterContext.AssertValidState();
 
-        if (value is byte[] arr)
+        if (value is Delegate dlg)
         {
-            var base64 = Convert.ToBase64String(arr);
-            var typedValue = new TypedValue(TypedValueTypes.ByteArray, base64);
+            var name = ConverterContext.Current.RegisterHostClosure(dlg);
+            var typedValue = new TypedValue(TypedValueTypes.Closure, name);
             serializer.Serialize(writer, typedValue);
         }
         else

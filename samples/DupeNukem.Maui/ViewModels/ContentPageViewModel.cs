@@ -39,7 +39,7 @@ internal sealed partial class ContentPageViewModel
         // ----
 
         // ContentPage.Appearing:
-        this.Ready = Command.Factory.Create<EventArgs>(async _ =>
+        this.Ready = Command.Factory.Create(async () =>
         {
             await this.WebViewPile.RentAsync(webView =>
             {

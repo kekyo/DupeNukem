@@ -104,7 +104,8 @@ var __dupeNukem_Messenger__ =
     };
 
     this.constructArray__ = arr => {
-        const base64 = btoa(new TextDecoder().decode(arr));
+        // https://developer.mozilla.org/en-US/docs/Glossary/Base64
+        const base64 = btoa(Array.from(arr, byte => String.fromCodePoint(byte)).join(""));
         return {
             __type__: "byteArray",
             __body__: base64
@@ -163,7 +164,8 @@ var __dupeNukem_Messenger__ =
                 case "byteArray":
                     if (obj.__body__ !== null) {
                         const base64 = obj.__body__;
-                        const arr = new TextEncoder().encode(atob(base64));
+                        // https://developer.mozilla.org/en-US/docs/Glossary/Base64
+                        const arr = Uint8Array.from(atob(base64), m => m.codePointAt(0));
                         return arr.buffer;
                     } else {
                         return null;

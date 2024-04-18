@@ -655,6 +655,8 @@ Apache-v2.
 
 ## History
 
+* 0.30.0:
+  * Fixed base64 conversion problem.
 * 0.29.0:
   * Renamed `JsonToken` to `JsonElement`, because VS intellisense is crashed by symbol confiction.
   * Improved `JsonElement` conversions.

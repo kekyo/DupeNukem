@@ -27,8 +27,8 @@ namespace DupeNukem;
 /// <summary>
 /// Safer represent JToken type.
 /// </summary>
-public abstract class JsonToken :
-    IEquatable<JsonToken>
+public abstract class JsonElement :
+    IEquatable<JsonElement>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal readonly Messenger? messenger;
@@ -36,7 +36,7 @@ public abstract class JsonToken :
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     internal readonly JToken token;
 
-    private protected JsonToken(
+    private protected JsonElement(
         Messenger? messenger, JToken token)
     {
         this.messenger = messenger;
@@ -62,12 +62,12 @@ public abstract class JsonToken :
     public JTokenType JsonType =>
         this.token.Type;
 
-    public bool Equals(JsonToken? rhs) =>
+    public bool Equals(JsonElement? rhs) =>
         rhs is { } r &&
         JToken.EqualityComparer.Equals(this.token, r.token);
 
     public override bool Equals(object? obj) =>
-        this.Equals(obj as JsonToken);
+        this.Equals(obj as JsonElement);
 
     public override int GetHashCode() =>
         JToken.EqualityComparer.GetHashCode(this.token);
@@ -101,11 +101,10 @@ public abstract class JsonToken :
             this.token.ToObject<T>()!;
     }
 
-    internal static JsonToken? FromJToken(
-        Messenger? messenger, JToken? token) =>
+    internal static JsonElement FromJToken(
+        Messenger? messenger, JToken token) =>
         token switch
         {
-            null => null,
             JObject obj => new JsonObject(messenger, obj),
             JArray arr => new JsonArray(messenger, arr),
             JValue v => new JsonValue(messenger, v),
@@ -113,14 +112,22 @@ public abstract class JsonToken :
         };
 
     /// <summary>
-    /// Create JsonToken from an instance.
+    /// Create JsonElement from JToken.
+    /// </summary>
+    /// <param name="token">JToken</param>
+    /// <returns>JsonElement if success.</returns>
+    public static JsonElement FromJToken(JToken token) =>
+        FromJToken(null, token);
+
+    /// <summary>
+    /// Create JsonElement from an instance.
     /// </summary>
     /// <param name="value">Instance or null</param>
-    /// <returns>JsonToken or null if success.</returns>
-    public static JsonToken? FromObject(object? value) =>
+    /// <returns>JsonElement if success.</returns>
+    public static JsonElement FromObject(object? value) =>
         value switch
         {
-            null => null,
+            null => JsonValue.CreateNull(),
             bool v => new JsonValue(null, new JValue(v)),
             byte v => new JsonValue(null, new JValue(v)),
             sbyte v => new JsonValue(null, new JValue(v)),
@@ -142,50 +149,95 @@ public abstract class JsonToken :
             Uri v => new JsonValue(null, new JValue(v)),
             Array arr => new JsonArray(null, JArray.FromObject(arr)),
             Enum v => new JsonValue(null, new JValue(v)),
+            JObject obj => new JsonObject(null, obj),
+            JArray arr => new JsonArray(null, arr),
+            JValue v => new JsonValue(null, v),
+            JToken _ => throw new ArgumentException(),
+            JsonElement v => v,
             _ => new JsonObject(null, JObject.FromObject(value)),
         };
 
-    public static implicit operator JsonToken(bool value) =>
+    public static implicit operator JsonElement(bool value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(byte value) =>
+    public static implicit operator JsonElement(byte value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(sbyte value) =>
+    public static implicit operator JsonElement(sbyte value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(short value) =>
+    public static implicit operator JsonElement(short value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(ushort value) =>
+    public static implicit operator JsonElement(ushort value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(int value) =>
+    public static implicit operator JsonElement(int value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(uint value) =>
+    public static implicit operator JsonElement(uint value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(long value) =>
+    public static implicit operator JsonElement(long value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(ulong value) =>
+    public static implicit operator JsonElement(ulong value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(float value) =>
+    public static implicit operator JsonElement(float value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(double value) =>
+    public static implicit operator JsonElement(double value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(decimal value) =>
+    public static implicit operator JsonElement(decimal value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(char value) =>
+    public static implicit operator JsonElement(char value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(string value) =>
+    public static implicit operator JsonElement(string? value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(DateTime value) =>
+    public static implicit operator JsonElement(DateTime value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(DateTimeOffset value) =>
+    public static implicit operator JsonElement(DateTimeOffset value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(TimeSpan value) =>
+    public static implicit operator JsonElement(TimeSpan value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(Guid value) =>
+    public static implicit operator JsonElement(Guid value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(Uri value) =>
+    public static implicit operator JsonElement(bool? value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(Array value) =>
+    public static implicit operator JsonElement(byte? value) =>
         FromObject(value)!;
-    public static implicit operator JsonToken(Enum value) =>
+    public static implicit operator JsonElement(sbyte? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(short? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(ushort? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(int? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(uint? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(long? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(ulong? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(float? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(double? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(decimal? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(char? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(DateTime? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(DateTimeOffset? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(TimeSpan? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(Guid? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(Uri? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(Array? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(Enum? value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(JObject value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(JArray value) =>
+        FromObject(value)!;
+    public static implicit operator JsonElement(JValue value) =>
         FromObject(value)!;
 }
 
@@ -193,7 +245,7 @@ public abstract class JsonToken :
 /// Safer represent JContainer type.
 /// </summary>
 public abstract class JsonContainer :
-    JsonToken, IEnumerable
+    JsonElement, IEnumerable
 {
     private protected JsonContainer(
         Messenger? messenger, JContainer token) :
@@ -217,12 +269,12 @@ public abstract class JsonContainer :
     /// <summary>
     /// Create JsonContainer derived instance from an instance.
     /// </summary>
-    /// <param name="value">Instance or null</param>
-    /// <returns>JsonContainer or null if success.</returns>
-    public static new JsonContainer? FromObject(object? value) =>
+    /// <param name="value">Instance</param>
+    /// <returns>JsonContainer if success.</returns>
+    public static new JsonContainer FromObject(object value) =>
         value switch
         {
-            null => null,
+            null => throw new ArgumentException(),
             bool _ => throw new ArgumentException(),
             byte _ => throw new ArgumentException(),
             sbyte _ => throw new ArgumentException(),
@@ -244,10 +296,17 @@ public abstract class JsonContainer :
             Uri _ => throw new ArgumentException(),
             Array arr => new JsonArray(null, JArray.FromObject(arr)),
             Enum _ => throw new ArgumentException(),
+            JObject obj => new JsonObject(null, obj),
+            JArray arr => new JsonArray(null, arr),
+            JToken _ => throw new ArgumentException(),
+            JsonContainer c => c,
+            JsonElement _ => throw new ArgumentException(),
             _ => new JsonObject(null, JObject.FromObject(value)),
         };
 
     public static implicit operator JsonContainer(Array value) =>
+        FromObject(value)!;
+    public static implicit operator JsonContainer(JContainer value) =>
         FromObject(value)!;
 }
 
@@ -258,9 +317,9 @@ internal readonly struct JsonPropertyItem
     private string Name { get; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-    public JsonToken? Value { get; }
+    public JsonElement Value { get; }
 
-    public JsonPropertyItem(string name, JsonToken? value)
+    public JsonPropertyItem(string name, JsonElement value)
     {
         this.Name = name;
         this.Value = value;
@@ -285,9 +344,9 @@ internal sealed class JsonObjectDebuggerTypeProxy
 [DebuggerDisplay("JsonObject: Count = {Count}")]
 [DebuggerTypeProxy(typeof(JsonObjectDebuggerTypeProxy))]
 public sealed class JsonObject :
-    JsonContainer, IEnumerable<KeyValuePair<string, JsonToken?>>, IEnumerable
+    JsonContainer, IEnumerable<KeyValuePair<string, JsonElement>>, IEnumerable
 #if !NET35 && !NET40
-    , IReadOnlyDictionary<string, JsonToken?>
+    , IReadOnlyDictionary<string, JsonElement>
 #endif
 {
     internal JsonObject(
@@ -317,7 +376,7 @@ public sealed class JsonObject :
 
     [DebuggerBrowsable(DebuggerBrowsableState.Collapsed)]
     [JsonIgnore]
-    public IEnumerable<JsonToken?> Values
+    public IEnumerable<JsonElement> Values
     {
         get
         {
@@ -325,20 +384,20 @@ public sealed class JsonObject :
 
             foreach (var p in this.token.Children().OfType<JProperty>())
             {
-                yield return FromJToken(this.messenger, p.Value)!;
+                yield return FromJToken(this.messenger, p.Value);
             }
         }
     }
 
     [JsonIgnore]
-    public JsonToken this[string propertyName]
+    public JsonElement this[string propertyName]
     {
         get
         {
             using var _ = base.Begin();
 
             return this.token.TryGetValue(propertyName, out var t) ?
-                FromJToken(this.messenger!, t)! :
+                FromJToken(this.messenger!, t) :
                 throw new KeyNotFoundException(propertyName);
         }
     }
@@ -346,7 +405,7 @@ public sealed class JsonObject :
     public bool ContainsKey(string key) =>
         this.token.ContainsKey(key);
 
-    public bool TryGetValue(string key, out JsonToken? value)
+    public bool TryGetValue(string key, out JsonElement value)
     {
         using var _ = base.Begin();
 
@@ -362,7 +421,7 @@ public sealed class JsonObject :
         }
     }
 
-    public IEnumerator<KeyValuePair<string, JsonToken?>> GetEnumerator()
+    public IEnumerator<KeyValuePair<string, JsonElement>> GetEnumerator()
     {
         using var _ = base.Begin();
 
@@ -378,12 +437,12 @@ public sealed class JsonObject :
     /// <summary>
     /// Create JsonObject derived instance from an instance.
     /// </summary>
-    /// <param name="value">Instance or null</param>
-    /// <returns>JsonObject or null if success.</returns>
-    public static new JsonObject? FromObject(object? value) =>
+    /// <param name="value">Instance</param>
+    /// <returns>JsonObject if success.</returns>
+    public static new JsonObject FromObject(object value) =>
         value switch
         {
-            null => null,
+            null => throw new ArgumentException(),
             bool _ => throw new ArgumentException(),
             byte _ => throw new ArgumentException(),
             sbyte _ => throw new ArgumentException(),
@@ -405,6 +464,10 @@ public sealed class JsonObject :
             Uri _ => throw new ArgumentException(),
             Array _ => throw new ArgumentException(),
             Enum _ => throw new ArgumentException(),
+            JObject obj => new JsonObject(null, obj),
+            JToken _ => throw new ArgumentException(),
+            JsonObject obj => obj,
+            JsonElement _ => throw new ArgumentException(),
             _ => new JsonObject(null, new JObject(value)),
         };
 }
@@ -417,7 +480,7 @@ internal sealed class JsonArrayDebuggerTypeProxy
         this.ja = ja;
 
     [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
-    internal JsonToken?[] Items =>
+    internal JsonElement?[] Items =>
         this.ja.ToArray();
 }
 
@@ -427,9 +490,9 @@ internal sealed class JsonArrayDebuggerTypeProxy
 [DebuggerDisplay("JsonArray: Count = {Count}")]
 [DebuggerTypeProxy(typeof(JsonArrayDebuggerTypeProxy))]
 public sealed class JsonArray :
-    JsonContainer, IEnumerable<JsonToken?>, IEnumerable
+    JsonContainer, IEnumerable<JsonElement?>, IEnumerable
 #if !NET35 && !NET40
-    , IReadOnlyList<JsonToken?>
+    , IReadOnlyList<JsonElement?>
 #endif
 {
     internal JsonArray(
@@ -443,7 +506,7 @@ public sealed class JsonArray :
         (JArray)base.token;
 
     [JsonIgnore]
-    public JsonToken? this[int index]
+    public JsonElement? this[int index]
     {
         get
         {
@@ -453,7 +516,7 @@ public sealed class JsonArray :
         }
     }
 
-    public IEnumerator<JsonToken?> GetEnumerator()
+    public IEnumerator<JsonElement?> GetEnumerator()
     {
         using var _ = base.Begin();
 
@@ -466,15 +529,24 @@ public sealed class JsonArray :
     private protected override IEnumerator OnGetEnumerator() =>
         this.GetEnumerator();
 
-    public static new JsonArray? FromObject(object? value) =>
+    /// <summary>
+    /// Create JsonArray from an instance.
+    /// </summary>
+    /// <param name="value">Instance</param>
+    /// <returns>JsonValue if success.</returns>
+    public static new JsonArray FromObject(object value) =>
         value switch
         {
-            null => null,
+            null => throw new ArgumentException(),
             Array arr => new JsonArray(null, new JArray(arr)),
+            JArray arr => new JsonArray(null, arr),
+            JsonArray arr => arr,
             _ => throw new ArgumentException(),
         };
 
     public static implicit operator JsonArray(Array value) =>
+        FromObject(value)!;
+    public static implicit operator JsonArray(JArray value) =>
         FromObject(value)!;
 }
 
@@ -483,7 +555,7 @@ public sealed class JsonArray :
 /// </summary>
 [DebuggerDisplay("{DisplayString}")]
 public sealed class JsonValue :
-    JsonToken
+    JsonElement
 {
     internal JsonValue(
         Messenger? messenger, JValue token) :
@@ -504,15 +576,18 @@ public sealed class JsonValue :
             var v => $"{v.GetType().Name}: {v}",
         } ?? "(null)";
 
+    public static JsonValue CreateNull() =>
+        new JsonValue(null, JValue.CreateNull());
+
     /// <summary>
-    /// Create JsonValue derived instance from an instance.
+    /// Create JsonValue from an instance.
     /// </summary>
     /// <param name="value">Instance or null</param>
     /// <returns>JsonValue or null if success.</returns>
-    public static new JsonValue? FromObject(object? value) =>
+    public static new JsonValue FromObject(object? value) =>
         value switch
         {
-            null => null,
+            null => CreateNull(),
             bool v => new JsonValue(null, new JValue(v)),
             byte v => new JsonValue(null, new JValue(v)),
             sbyte v => new JsonValue(null, new JValue(v)),
@@ -533,49 +608,87 @@ public sealed class JsonValue :
             Guid v => new JsonValue(null, new JValue(v)),
             Uri v => new JsonValue(null, new JValue(v)),
             Enum v => new JsonValue(null, new JValue(v)),
+            JValue v => new JsonValue(null, v),
+            JsonValue v => v,
             _ => throw new ArgumentException(),
         };
 
     public static implicit operator JsonValue(bool value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(byte value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(sbyte value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(short value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(ushort value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(int value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(uint value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(long value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(ulong value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(float value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(double value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(decimal value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(char value) =>
-        FromObject(value)!;
-    public static implicit operator JsonValue(string value) =>
-        FromObject(value)!;
+        FromObject(value);
+    public static implicit operator JsonValue(string? value) =>
+        FromObject(value);
     public static implicit operator JsonValue(DateTime value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(DateTimeOffset value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(TimeSpan value) =>
-        FromObject(value)!;
+        FromObject(value);
     public static implicit operator JsonValue(Guid value) =>
-        FromObject(value)!;
-    public static implicit operator JsonValue(Uri value) =>
-        FromObject(value)!;
-    public static implicit operator JsonValue(Array value) =>
-        FromObject(value)!;
-    public static implicit operator JsonValue(Enum value) =>
-        FromObject(value)!;
+        FromObject(value);
+    public static implicit operator JsonValue(bool? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(byte? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(sbyte? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(short? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(ushort? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(int? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(uint? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(long? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(ulong? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(float? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(double? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(decimal? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(char? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(DateTime? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(DateTimeOffset? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(TimeSpan? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(Guid? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(Uri? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(Array? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(Enum? value) =>
+        FromObject(value);
+    public static implicit operator JsonValue(JValue value) =>
+        FromObject(value);
 }

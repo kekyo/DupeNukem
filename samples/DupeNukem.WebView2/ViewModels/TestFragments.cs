@@ -36,9 +36,9 @@ partial class MainWindowViewModel
     public sealed class CustomType
     {
         public int Value1 = 0;
-        public string? Value2 = null;
-        public CustomType? Value3 = null;
-        public JsonToken? Value4 = null;
+        public string Value2 = null!;
+        public CustomType Value3 = null!;
+        public JsonElement Value4 = null!;
 
         public override bool Equals(object? rhs) =>
             rhs is CustomType r &&
@@ -190,11 +190,11 @@ partial class MainWindowViewModel
                         Value2 = "DEF",
                         Value4 = 111,
                     },
-                    Value4 = JsonToken.FromObject(new CustomType
+                    Value4 = JsonElement.FromObject(new CustomType
                     {
                         Value1 = 789,
                         Value2 = "GHI",
-                        Value4 = JsonToken.FromObject(new CustomType
+                        Value4 = JsonElement.FromObject(new CustomType
                         {
                             Value1 = 999,
                             Value2 = "XXX",
@@ -212,11 +212,11 @@ partial class MainWindowViewModel
                     Value2 = "DEF",
                     Value4 = 111,
                 },
-                Value4 = JsonToken.FromObject(new CustomType
+                Value4 = JsonElement.FromObject(new CustomType
                 {
                     Value1 = 789,
                     Value2 = "GHI",
-                    Value4 = JsonToken.FromObject(new CustomType
+                    Value4 = JsonElement.FromObject(new CustomType
                     {
                         Value1 = 999,
                         Value2 = "XXX",

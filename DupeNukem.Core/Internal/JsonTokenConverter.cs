@@ -18,7 +18,7 @@ namespace DupeNukem.Internal;
 internal sealed class JsonTokenConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType) =>
-        typeof(JsonToken).IsAssignableFrom(objectType);
+        typeof(JsonElement).IsAssignableFrom(objectType);
 
     public override object? ReadJson(
         JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
@@ -27,7 +27,7 @@ internal sealed class JsonTokenConverter : JsonConverter
 
         if (serializer.Deserialize<JToken>(reader) is { } token)
         {
-            return JsonToken.FromJToken(ConverterContext.Current, token);
+            return JsonElement.FromJToken(ConverterContext.Current, token);
         }
         return null;
     }
@@ -37,7 +37,7 @@ internal sealed class JsonTokenConverter : JsonConverter
     {
         ConverterContext.AssertValidState();
 
-        if (value is JsonToken t)
+        if (value is JsonElement t)
         {
             serializer.Serialize(writer, t.token);
         }

@@ -655,6 +655,9 @@ Apache-v2.
 
 ## History
 
+* 0.29.0:
+  * Renamed `JsonToken` to `JsonElement`, because VS intellisense is crashed by symbol confiction.
+  * Improved `JsonElement` conversions.
 * 0.28.0:
   * Supported `JsonToken` type sets.
     If you want to handle untyped JSON using the `JToken` type,

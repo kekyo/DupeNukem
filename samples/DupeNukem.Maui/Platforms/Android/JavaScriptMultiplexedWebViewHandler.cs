@@ -9,6 +9,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////
 
+using Android.Webkit;
 using DupeNukem.Maui.Controls;
 using Java.Interop;
 using Microsoft.Maui;
@@ -18,7 +19,8 @@ using System.Threading.Tasks;
 
 namespace DupeNukem.Maui;
 
-public sealed class JavaScriptInterface : Java.Lang.Object
+internal sealed class JavaScriptInterface :
+    Java.Lang.Object
 {
     private readonly WeakReference<JavaScriptMultiplexedWebViewHandler> handler;
 
@@ -35,6 +37,18 @@ public sealed class JavaScriptInterface : Java.Lang.Object
             webView.SendToHostMessage(data);
         }
     }
+}
+
+internal sealed class JavaScriptResultCallback :
+    Java.Lang.Object, IValueCallback
+{
+    private readonly TaskCompletionSource<Java.Lang.Object?> tcs = new();
+
+    public Task<Java.Lang.Object?> Task =>
+        tcs.Task;
+
+    public void OnReceiveValue(Java.Lang.Object? value) =>
+        this.tcs.TrySetResult(value);
 }
 
 // DIRTY: JavaScriptMultiplexedWebView:
@@ -62,8 +76,9 @@ public sealed class JavaScriptMultiplexedWebViewHandler :
         ((JavaScriptMultiplexedWebView)base.VirtualView).SetInvokedJavaScriptListener(
             script =>
             {
-                nativeWebView.EvaluateJavascript(script, null);
-                return Task.CompletedTask;
+                var callback = new JavaScriptResultCallback();
+                nativeWebView.EvaluateJavascript(script, callback);
+                return callback.Task;
             });
 
         return nativeWebView;

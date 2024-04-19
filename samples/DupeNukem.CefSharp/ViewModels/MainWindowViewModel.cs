@@ -45,15 +45,9 @@ namespace DupeNukem.ViewModels
                     // Bound between CefSharp and DupeNukem Messenger.
 
                     // Step 2: Hook up .NET --> JavaScript message handler.
-                    messenger.SendRequest += async (s, e) =>
-                    {
-                        // Marshal to main thread.
-                        if (await UIThread.TryBind())
-                        {
-                            cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
-                                e.ToJavaScript());
-                        }
-                    };
+                    messenger.SendRequest += (s, e) =>
+                        cefSharp.BrowserCore.MainFrame.ExecuteJavaScriptAsync(
+                            e.ToJavaScript());
 
                     // Step 3: Attached JavaScript --> .NET message handler.
                     cefSharp.JavascriptMessageReceived += (s, e) =>

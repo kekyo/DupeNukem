@@ -20,11 +20,15 @@ namespace DupeNukem.WinForms.WebView2;
 
 public partial class MainForm : Form
 {
-    private readonly WebViewMessenger messenger = new();
+    private readonly WebViewMessenger messenger;
 
     public MainForm()
     {
         this.InitializeComponent();
+
+        // HACK: We have to construct WebViewMessenger AFTER WinForms initialization (`this.InitializeComponent()`.)
+        // Because WinFormsSynchronizationContext initialization has not been completed.
+        this.messenger = new();
 
         HookWithMessengerTestCode(this.messenger);   // FOR TEST
     }
@@ -41,23 +45,12 @@ public partial class MainForm : Form
 
         // Step 2: Hook up .NET --> JavaScript message handler.
         this.messenger.SendRequest += (s, e) =>
-        {
-            try
-            {
-                // Marshal to main thread.
-                this.Invoke(() => this.webView2.CoreWebView2.PostWebMessageAsString(e.JsonString));
-            }
-            // Ignore all exception, because may cause it on application shutdown sequence.
-            catch
-            {
-            }
-        };
+            this.webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
 
         // Step 3: Attached JavaScript --> .NET message handler.
-        var serializer = Messenger.GetDefaultJsonSerializer();
         this.webView2.CoreWebView2.WebMessageReceived += (s, e) =>
         {
-            if (serializer.Deserialize(
+            if (this.messenger.Serializer.Deserialize(
                 new StringReader(e.WebMessageAsJson),
                 typeof(object))?.ToString() is { } m)
             {

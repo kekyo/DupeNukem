@@ -50,20 +50,13 @@ internal sealed partial class MainWindowViewModel
                 await webView2.EnsureCoreWebView2Async();
 
                 // Step 2: Hook up .NET --> JavaScript message handler.
-                messenger.SendRequest += async (s, e) =>
-                {
-                    // Marshal to main thread.
-                    if (await UIThread.TryBind())
-                    {
-                        webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
-                    }
-                };
+                messenger.SendRequest += (s, e) =>
+                    webView2.CoreWebView2.PostWebMessageAsString(e.JsonString);
 
                 // Step 3: Attached JavaScript --> .NET message handler.
-                var serializer = Messenger.GetDefaultJsonSerializer();
                 webView2.CoreWebView2.WebMessageReceived += (s, e) =>
                 {
-                    if (serializer.Deserialize(
+                    if (messenger.Serializer.Deserialize(
                         new StringReader(e.WebMessageAsJson),
                         typeof(object))?.ToString() is { } m)
                     {

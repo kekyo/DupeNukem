@@ -208,9 +208,7 @@ public class Messenger : IMessenger, IDisposable
             return null;
         }
 
-        this.peerClosureRegistry.Register(dlg, name);
-
-        return dlg;
+        return (Delegate)this.peerClosureRegistry.GetOrRegister(name, dlg);
     }
 
     internal string RegisterHostClosure(Delegate closure)

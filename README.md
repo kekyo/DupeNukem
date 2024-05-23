@@ -655,6 +655,8 @@ Apache-v2.
 
 ## History
 
+* 0.31.0:
+  * Improved stability for invoking with AbortSignals.
 * 0.30.0:
   * Fixed base64 conversion problem.
 * 0.29.0:

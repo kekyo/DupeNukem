@@ -40,10 +40,20 @@ internal sealed class FinalizationRegistry
         }, null, Timeout.Infinite, Timeout.Infinite);
     }
 
-    public void Register(object obj, string id)
+    public object GetOrRegister(string id, object obj)
     {
         lock (this.objects)
         {
+            if (this.objects.TryGetValue(id, out var wr))
+            {
+                if (wr.Target is not { } o)
+                {
+                    wr.Target = obj;
+                    o = obj;
+                }
+                return o;
+            }
+
             this.objects.Add(id, new(obj));
 
             if (this.objects.Count == 1)
@@ -56,6 +66,8 @@ internal sealed class FinalizationRegistry
                 this.waitForCollectedThreshold = true;
                 this.Collect();
             }
+
+            return obj;
         }
     }
 

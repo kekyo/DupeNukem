@@ -14,7 +14,6 @@ var __dupeNukem_Messenger__ =
     __dupeNukem_Messenger__ || new (function () {
 
     this.suspendings__ = new Map();
-    this.id__ = 0;
     this.debugLog__ = false;
     this.isInitialized__ = false;
 
@@ -63,7 +62,7 @@ var __dupeNukem_Messenger__ =
 
     this.constructClosure__ = f => {
         if (f.__dupeNukem_id__ === undefined) {
-            const closureId = "closure_$" + (this.id__++);
+            const closureId = "closure_$" + crypto.randomUUID().toString().replaceAll("-", "");
             f.__dupeNukem_id__ = closureId;
             window.__peerClosures__[closureId] = f;
             const name = "__peerClosures__." + closureId;
@@ -83,7 +82,7 @@ var __dupeNukem_Messenger__ =
 
     this.constructAbortSignal__ = signal => {
         if (signal.__dupeNukem_id__ === undefined) {
-            const signalId = "abortSignal_$" + (this.id__++);
+            const signalId = "abortSignal_$" + crypto.randomUUID().toString().replaceAll("-", "");
             signal.__dupeNukem_id__ = signalId;
             if (!signal.aborted) {
                 signal.addEventListener(
@@ -277,7 +276,7 @@ var __dupeNukem_Messenger__ =
     this.invokeHostMethod__ = (name, args) => {
         const rargs = args.map(this.normalizeObjects__);
         return new Promise((resolve, reject) => {
-            const id = "client_" + (this.id__++);
+            const id = "client_$" + crypto.randomUUID().toString().replaceAll("-", "");
             try {
                 const descriptor = { resolve: resolve, reject: reject, };
                 this.suspendings__.set(id, descriptor);

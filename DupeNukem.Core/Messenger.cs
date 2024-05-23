@@ -48,7 +48,6 @@ public class Messenger : IMessenger, IDisposable
     private readonly TimeSpan timeoutDuration;
     private readonly Timer timeoutTimer;
     private readonly FinalizationRegistry peerClosureRegistry;
-    private volatile int id;
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     public NamingStrategy MemberAccessNamingStrategy { get; }
@@ -208,14 +207,12 @@ public class Messenger : IMessenger, IDisposable
             return null;
         }
 
-        this.peerClosureRegistry.Register(dlg, name);
-
-        return dlg;
+        return (Delegate)this.peerClosureRegistry.GetOrRegister(name, dlg);
     }
 
     internal string RegisterHostClosure(Delegate closure)
     {
-        var name = "closure_$" + Interlocked.Increment(ref this.id);
+        var name = $"closure_${Guid.NewGuid().ToString("N").ToLowerInvariant()}";
         this.RegisterMethod(
             name,
             new DynamicFunctionDescriptor(closure, this),
@@ -317,7 +314,7 @@ public class Messenger : IMessenger, IDisposable
             }
         }
 
-        var id = "host_" + Interlocked.Increment(ref this.id);
+        var id = $"host_${Guid.NewGuid().ToString("N").ToLowerInvariant()}";
 
         ct.Register(() =>
         {
